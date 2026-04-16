@@ -19,6 +19,20 @@ The ecosystem is now **100% Production-Calibrated**. To deploy to the cloud:
     - `MONGODB_URI`: Your production MongoDB connection string.
     - `NODE_ENV`: `production`
 
+## ⚙️ Local Development Setup
+
+To run this project locally, you need a MongoDB database:
+
+1. Copy the example environment file:
+   ```bash
+   cp .env.example .env
+   ```
+2. Open `.env` and fill in your `MONGODB_URI` connection string.
+3. Start the application:
+   ```bash
+   npm run dev
+   ```
+
 ## 💎 Elite Feature Set
 - **Satellite Resilience**: 100% mission-robust tracking with automatic "Urban Fallback" if GPS is lost.
 - **Progress Engineering**: Real-time visual route tracking (`███░░ 60%`).

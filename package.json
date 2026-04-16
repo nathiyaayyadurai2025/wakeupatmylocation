@@ -1,5 +1,5 @@
 {
-  "name": "tmp-project",
+  "name": "wakemystop",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -14,12 +14,10 @@
     "clsx": "^2.1.1",
     "framer-motion": "^12.38.0",
     "leaflet": "^1.9.4",
-    "lucide-react": "^1.7.0",
-    "mapbox-gl": "^3.20.0",
+    "lucide-react": "^0.483.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
     "react-leaflet": "^5.0.0",
-    "react-map-gl": "^8.1.0",
     "react-router-dom": "^7.13.2",
     "tailwind-merge": "^3.5.0",
     "vite-plugin-pwa": "^1.2.0"
