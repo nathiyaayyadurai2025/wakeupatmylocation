@@ -5,7 +5,7 @@ import {
   Navigation, Map as MapIcon, Settings as SettingsIcon, Bell, Train, Bus, Info, 
   ChevronUp, ChevronDown, Check, X, MapPinOff, LocateFixed, Activity, 
   Zap, Clock, ShieldCheck, Sliders, Gauge, ArrowRight, AlertTriangle, RefreshCw,
-  Terminal, Download
+  Terminal, Download, Play, Pause
 } from 'lucide-react';
 import { AlarmContext } from '../App';
 import { CALCULATE_DISTANCE, ESTIMATE_TIME } from '../constants';
@@ -77,23 +77,21 @@ const parseMins = (timeStr) => {
 };
 
 // ─── RoutePolylines ─────────────────────────────────────────────────────────
-// Draws the completed (dashed grey) + remaining (solid blue) segments
-// Only between the customer's start station and destination station.
 const RoutePolylines = ({ routeCoords, currentStationIdx }) => {
   if (!routeCoords || routeCoords.length < 2) return null;
 
   const idx = Math.max(0, Math.min(currentStationIdx ?? 0, routeCoords.length - 1));
 
-  // Completed: from route start up to (and including) current station
+  // Completed: from route start up to (and including) current station — DOTTED
   const completedPath = routeCoords.slice(0, idx + 1).map(s => [s.lat, s.lng]);
-  // Remaining: from current station onward to destination
+  // Remaining: from current station onward to destination — SOLID
   const remainingPath = routeCoords.slice(idx).map(s => [s.lat, s.lng]);
 
   const isValid = (p) => p.length >= 2 && p.every(c => Array.isArray(c) && typeof c[0] === 'number');
 
   return (
     <>
-      {/* ── Completed segment: dashed grey ── */}
+      {/* ── Completed segment: dashed grey (DOTTED) ── */}
       {isValid(completedPath) && (
         <Polyline
           positions={completedPath}
@@ -101,7 +99,7 @@ const RoutePolylines = ({ routeCoords, currentStationIdx }) => {
             color: '#64748b',
             weight: 4,
             opacity: 0.7,
-            dashArray: '10, 8',
+            dashArray: '8, 12',
             lineCap: 'round',
             lineJoin: 'round',
           }}
@@ -124,9 +122,40 @@ const RoutePolylines = ({ routeCoords, currentStationIdx }) => {
   );
 };
 
+// ─── AutoFollowController ───────────────────────────────────────────────────
+// Auto-follows user position at zoom 15–17 with smooth animation
+const AutoFollowController = ({ position, autoFollow, recenterKey }) => {
+  const map = useMap();
+  const hasInitialized = useRef(false);
+
+  // Auto-follow on position changes
+  useEffect(() => {
+    if (!position || !autoFollow) return;
+    const currentZoom = map.getZoom();
+    const targetZoom = currentZoom < 15 ? 16 : Math.min(currentZoom, 17);
+    map.flyTo(position, targetZoom, { animate: true, duration: 1.2 });
+  }, [position, autoFollow, map]);
+
+  // Recenter on button press
+  useEffect(() => {
+    if (recenterKey === 0) return;
+    if (!position) return;
+    map.flyTo(position, 16, { animate: true, duration: 1.2 });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [recenterKey]);
+
+  // Initial fit to route on first render
+  useEffect(() => {
+    if (hasInitialized.current || !position) return;
+    map.setView(position, 14);
+    hasInitialized.current = true;
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [position]);
+
+  return null;
+};
+
 // ─── MapBoundsController ────────────────────────────────────────────────────
-// On first render: fitBounds to the entire clipped route segment.
-// On subsequent ticks: only re-pan if user explicitly requests recenter.
 const MapBoundsController = ({ routeCoords, recenterKey }) => {
   const map = useMap();
   const hasInitialized = useRef(false);
@@ -162,7 +191,6 @@ const MapBoundsController = ({ routeCoords, recenterKey }) => {
 };
 
 // ─── MapObserver ────────────────────────────────────────────────────────────
-// Passively tracks internal Leaflet states useful for debug panels without re-rendering root excessively
 const MapObserver = ({ setMapZoom }) => {
   useMapEvents({
     zoomend: (e) => setMapZoom(e.target.getZoom())
@@ -171,7 +199,6 @@ const MapObserver = ({ setMapZoom }) => {
 };
 
 // ─── AnimatedTrainMarker ────────────────────────────────────────────────────
-// Moves smoothly between positions using requestAnimationFrame interpolation
 const AnimatedTrainMarker = ({ position }) => {
   const markerRef = useRef(null);
   const prevPosRef = useRef(null);
@@ -224,6 +251,19 @@ const AnimatedTrainMarker = ({ position }) => {
   );
 };
 
+// ─── Debug Status Badge ─────────────────────────────────────────────────────
+const StatusBadge = ({ value, greenWhen, yellowWhen, label }) => {
+  let color = 'bg-red-500/20 text-red-400 border-red-500/30';
+  if (greenWhen) color = 'bg-green-500/20 text-green-400 border-green-500/30';
+  else if (yellowWhen) color = 'bg-amber-500/20 text-amber-400 border-amber-500/30';
+  
+  return (
+    <span className={`inline-flex items-center px-1.5 py-0.5 text-[9px] font-black uppercase rounded-md border ${color}`}>
+      {value}
+    </span>
+  );
+};
+
 // ─── TrackingPage ───────────────────────────────────────────────────────────
 const TrackingPage = () => {
   const navigate = useNavigate();
@@ -233,6 +273,7 @@ const TrackingPage = () => {
   const [recenterKey, setRecenterKey] = useState(0);
   const [lastRefresh, setLastRefresh] = useState(Date.now());
   const [isMissedStop, setIsMissedStop] = useState(false);
+  const [autoFollow, setAutoFollow] = useState(true);
 
   // ── Debug State ──
   const [isDebugActive, setIsDebugActive] = useState(false);
@@ -241,11 +282,16 @@ const TrackingPage = () => {
   const latestDataRef = useRef(null);
   const [mapZoom, setMapZoom] = useState(10);
 
+  // ── Simulation slider state ──
+  const [isSimSliderActive, setIsSimSliderActive] = useState(false);
+  const [simSliderValue, setSimSliderValue] = useState(0);
+
   // ── Location hook ──
   const { 
-    location, inaccuracy, error: locationError, isSimulator, 
+    location, inaccuracy, speed, error: locationError, isSimulator, simulationProgress,
     batterySaver, setBatterySaver, 
-    startTracking, stopTracking, startJourneySimulation 
+    startTracking, stopTracking, startJourneySimulation,
+    initSimulationRoute, setSimulationSlider
   } = useLocation();
 
   // ── Context ──
@@ -269,6 +315,7 @@ const TrackingPage = () => {
   const prevLocRef = useRef(null);
   const prevDistRef = useRef(null);
   const intervalRef = useRef(null);
+  const apiResponseTimeRef = useRef(null);
 
   // ── All stops for the selected route ──
   const allRouteStops = useMemo(() =>
@@ -283,7 +330,7 @@ const TrackingPage = () => {
     return null;
   }, [selectedStops, allRouteStops]);
 
-  // ── Origin stop (first in train's full stop list, OR first selected stop) ──
+  // ── Origin stop ──
   const originStop = useMemo(() => {
     if (allRouteStops && allRouteStops.length > 0) return allRouteStops[0];
     return null;
@@ -291,7 +338,6 @@ const TrackingPage = () => {
 
   // ─────────────────────────────────────────────────────────────────────────
   // ROUTE COORDS: clipped between ORIGIN and DESTINATION (inclusive)
-  // This is what we visualize on the map — only the relevant segment.
   // ─────────────────────────────────────────────────────────────────────────
   const routeCoords = useMemo(() => {
     if (!allRouteStops || allRouteStops.length < 2 || !destinationStop) return null;
@@ -307,11 +353,14 @@ const TrackingPage = () => {
   }, [allRouteStops, destinationStop]);
 
   // ─────────────────────────────────────────────────────────────────────────
-  // CORE TRACKING ENGINE — called on location update or 30s tick
+  // CORE TRACKING ENGINE
+  // Uses: Remaining Distance / Average Speed for ETA
   // ─────────────────────────────────────────────────────────────────────────
   const runTrackingEngine = useCallback(() => {
     const loc = location;
     if (!loc || !allRouteStops || !destinationStop) return;
+
+    const apiStart = performance.now();
 
     // Update context location
     if (!prevLocRef.current || prevLocRef.current.lat !== loc.lat || prevLocRef.current.lng !== loc.lng) {
@@ -323,8 +372,7 @@ const TrackingPage = () => {
     const now = new Date();
     const nowMins = now.getHours() * 60 + now.getMinutes();
 
-    // ── Timetable-based current station index ──────────────────────────────
-    // Walk the timetable; find the last station whose scheduled departure is ≤ now
+    // ── Timetable-based current station index ──
     let stIdx = 0;
     for (let i = 0; i < stations.length; i++) {
       const dep = parseMins(stations[i].departure || stations[i].arrival);
@@ -342,11 +390,11 @@ const TrackingPage = () => {
     setCurrentStationIdx(stIdx);
     setNextStop(stations[stIdx]);
 
-    // ── Destination index (within full stop list) ──────────────────────────
+    // ── Destination index ──
     const destName = destinationStop.station || destinationStop.stopName;
     const destStation = stations.find(s => (s.station || s.stopName) === destName) ?? stations[stations.length - 1];
 
-    // ── Distance ──────────────────────────────────────────────────────────
+    // ── Distance ──
     let remKm = 0;
     if (typeof destStation.km === 'number' && typeof stations[stIdx].km === 'number') {
       remKm = Math.max(0, destStation.km - stations[stIdx].km);
@@ -360,26 +408,37 @@ const TrackingPage = () => {
       prevDistRef.current = remKm.toFixed(0);
     }
 
-    // ── Progress ──────────────────────────────────────────────────────────
+    // ── Progress ──
     const destIdx = stations.findIndex(s => (s.station || s.stopName) === destName);
     const validDest = destIdx > 0 ? destIdx : stations.length - 1;
     const rawProgress = (stIdx / validDest) * 100;
     setProgress(Math.min(rawProgress, 99));
 
-    // ── ETA ───────────────────────────────────────────────────────────────
-    const destArrival = parseMins(destStation.arrival ?? destStation.departure);
-    let finalETA = 0;
-    if (destArrival !== null) {
-      let diff = destArrival - nowMins;
-      if (diff < 0) diff += 1440;
-      finalETA = diff;
-    } else {
-      const speed = travelMode === 'train' ? 65 : 45;
-      finalETA = Math.round(remKm / speed * 60);
+    // ── ETA: Remaining Distance / Average Speed ──
+    // Average Speed = Total Route Distance / Total Route Time
+    const firstDep = parseMins(stations[0].departure || stations[0].arrival);
+    const lastArr = parseMins(destStation.arrival ?? destStation.departure);
+    let avgSpeedKmh = travelMode === 'train' ? 65 : 45; // fallback
+
+    if (firstDep !== null && lastArr !== null) {
+      let totalMins = lastArr - firstDep;
+      if (totalMins <= 0) totalMins += 1440; // overnight crossing
+      const totalKm = typeof destStation.km === 'number' && typeof stations[0].km === 'number'
+        ? destStation.km - stations[0].km
+        : 0;
+      if (totalKm > 0 && totalMins > 0) {
+        avgSpeedKmh = (totalKm / totalMins) * 60;
+      }
     }
+
+    // Use GPS speed if available and moving
+    const gpsSpeedKmh = (speed && speed > 1) ? speed * 3.6 : null;
+    const effectiveSpeed = gpsSpeedKmh || avgSpeedKmh;
+    
+    const finalETA = effectiveSpeed > 0 ? Math.round(remKm / effectiveSpeed * 60) : 0;
     setEstimatedTime(finalETA);
 
-    // ── Alarm trigger ─────────────────────────────────────────────────────
+    // ── Alarm trigger ──
     const distToFinal = CALCULATE_DISTANCE(loc.lat, loc.lng, destStation.lat, destStation.lng ?? destStation.lon);
     if (distToFinal <= settings.distanceThreshold) {
       setIsAlarmActive(true);
@@ -388,18 +447,21 @@ const TrackingPage = () => {
     }
     lastDistanceRef.current = distToFinal;
 
-  }, [location, allRouteStops, destinationStop, settings, navigate, setIsAlarmActive,
-      setUserLocation, setRemainingDistance, travelMode, setActiveStop]);
+    // API response time tracking
+    apiResponseTimeRef.current = Math.round(performance.now() - apiStart);
 
-  // ── Lifecycle: start tracking + 30s refresh ─────────────────────────────
+  }, [location, allRouteStops, destinationStop, settings, navigate, setIsAlarmActive,
+      setUserLocation, setRemainingDistance, travelMode, setActiveStop, speed]);
+
+  // ── Lifecycle: start tracking + 5s refresh ──
   useEffect(() => {
     setMounted(true);
     startTracking();
 
-    // 30-second refresh tick
+    // 5-second refresh tick for ETA updates
     intervalRef.current = setInterval(() => {
       setLastRefresh(Date.now());
-    }, 30000);
+    }, 5000);
 
     return () => {
       stopTracking?.();
@@ -408,12 +470,12 @@ const TrackingPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // ── Run engine on location change or 30s tick ──────────────────────────
+  // ── Run engine on location change or 5s tick ──
   useEffect(() => {
     runTrackingEngine();
   }, [location, lastRefresh, runTrackingEngine]);
 
-  // ── Within routeCoords, find the index of currentStation ─────────────────
+  // ── Within routeCoords, find the index of currentStation ──
   const routeCurrentIdx = useMemo(() => {
     if (!routeCoords || !allRouteStops) return 0;
     const currentStationName = allRouteStops[currentStationIdx]?.station ?? allRouteStops[currentStationIdx]?.stopName;
@@ -422,21 +484,27 @@ const TrackingPage = () => {
     return idx >= 0 ? idx : 0;
   }, [routeCoords, currentStationIdx, allRouteStops]);
 
-  // ── Train marker position = current station in route ─────────────────────
+  // ── Train marker position ──
   const trainMarkerPos = useMemo(() => {
     if (!routeCoords || routeCoords.length === 0) return null;
     const s = routeCoords[routeCurrentIdx];
     return s ? [s.lat, s.lng] : null;
   }, [routeCoords, routeCurrentIdx]);
 
-  // ── Destination marker position ───────────────────────────────────────────
+  // ── GPS user marker position for auto-follow ──
+  const userMarkerPos = useMemo(() => {
+    if (!location) return null;
+    return [location.lat, location.lng];
+  }, [location]);
+
+  // ── Destination marker position ──
   const destMarkerPos = useMemo(() => {
     if (!routeCoords || routeCoords.length === 0) return null;
     const last = routeCoords[routeCoords.length - 1];
     return last ? [last.lat, last.lng] : null;
   }, [routeCoords]);
 
-  // ── Derived display data ─────────────────────────────────────────────────
+  // ── Derived display data ──
   const currentStopName = useMemo(() => {
     if (!allRouteStops) return 'Tracking...';
     return allRouteStops[currentStationIdx]?.station ?? allRouteStops[currentStationIdx]?.stopName ?? 'Origin';
@@ -470,7 +538,7 @@ const TrackingPage = () => {
 
   const [destIcon] = useState(() => createDestIcon());
 
-  // ── Debug mode logic ────────────────────────────────────────────────────────
+  // ── Debug mode logic ──
   const _etaTrack = useRef({ val: null, time: Date.now() });
   const _gpsTrack = useRef({ lat: null, lng: null, time: Date.now() });
 
@@ -478,12 +546,14 @@ const TrackingPage = () => {
     if (_etaTrack.current.val !== estimatedTime) {
       _etaTrack.current = { val: estimatedTime, time: Date.now() };
     }
-    const etaStale = estimatedTime !== null && (Date.now() - _etaTrack.current.time > 60000 * 3); // 3 mins motionless ETA considered error
+    const etaStale = estimatedTime !== null && (Date.now() - _etaTrack.current.time > 60000 * 3);
 
     if (_gpsTrack.current.lat !== location?.lat || _gpsTrack.current.lng !== location?.lng) {
       _gpsTrack.current = { lat: location?.lat, lng: location?.lng, time: Date.now() };
     }
-    const gpsStale = location?.lat ? (Date.now() - _gpsTrack.current.time > 15000) : true; // 15 sec no change
+    const gpsStale = location?.lat ? (Date.now() - _gpsTrack.current.time > 15000) : true;
+
+    const gpsSpeedKmh = speed ? Math.round(speed * 3.6) : 0;
 
     latestDataRef.current = {
       timestamp: new Date().toISOString(),
@@ -491,15 +561,15 @@ const TrackingPage = () => {
         permission: locationError ? 'DENIED' : 'GRANTED',
         lat: location?.lat?.toFixed(5) ?? '--',
         lng: location?.lng?.toFixed(5) ?? '--',
-        accuracy: location?.accuracy ? Math.round(location.accuracy) : '--',
+        accuracy: inaccuracy ? Math.round(inaccuracy) : '--',
         lastUpdate: new Date(_gpsTrack.current.time).toLocaleTimeString(),
-        interval: '3s',
+        interval: '5s',
         stale: gpsStale
       },
       tracking: {
         active: mounted ? 'Yes' : 'No',
         mode: travelMode || 'unknown',
-        speed: location?.speed ? Math.round(location.speed * 3.6) : 0,
+        speed: gpsSpeedKmh,
         distance: remainingDistance ?? '--',
         eta: estimatedTime !== null ? estimatedTime : '--',
         etaStale
@@ -512,7 +582,7 @@ const TrackingPage = () => {
       },
       map: {
         zoom: mapZoom ?? 10,
-        followActive: 'Yes', 
+        followActive: autoFollow ? 'Yes' : 'No', 
         markerVisible: !!trainMarkerPos ? 'Yes' : 'No',
         routeVisible: (routeCoords && routeCoords.length > 0) ? 'Yes' : 'No',
         dottedVisible: (routeCoords && currentStationIdx > 0) ? 'Yes' : 'No'
@@ -521,9 +591,14 @@ const TrackingPage = () => {
         distanceToDest: lastDistanceRef.current ? lastDistanceRef.current.toFixed(2) : '--',
         alertRadius: settings.distanceThreshold ?? 2,
         status: 'Standby'
+      },
+      performance: {
+        apiResponseMs: apiResponseTimeRef.current ?? '--',
+        gpsUpdateInterval: '5s',
+        mapSmooth: mapZoom >= 10 ? 'OK' : 'Low'
       }
     };
-  }, [location, remainingDistance, estimatedTime, progress, settings, currentStationIdx, allRouteStops, stopsRemaining, travelMode, trainMarkerPos, mapZoom, locationError, mounted, routeCoords]);
+  }, [location, remainingDistance, estimatedTime, progress, settings, currentStationIdx, allRouteStops, stopsRemaining, travelMode, trainMarkerPos, mapZoom, locationError, mounted, routeCoords, autoFollow, speed, inaccuracy]);
 
   useEffect(() => {
     if (!isDebugActive) return;
@@ -533,7 +608,7 @@ const TrackingPage = () => {
         debugLog.current.push({ ...latestDataRef.current });
       }
     };
-    tick(); // run right away
+    tick();
     const interval = setInterval(tick, 3000);
     return () => clearInterval(interval);
   }, [isDebugActive]);
@@ -549,7 +624,21 @@ const TrackingPage = () => {
     downloadAnchorNode.remove();
   }, []);
 
-  // ── Loading guard ─────────────────────────────────────────────────────────
+  // ── Simulation slider handler ──
+  const handleSimSlider = useCallback((e) => {
+    const val = parseFloat(e.target.value);
+    setSimSliderValue(val);
+    
+    // Initialize route if not yet done
+    if (!isSimulator && routeCoords && routeCoords.length >= 2) {
+      const start = routeCoords[0];
+      const end = routeCoords[routeCoords.length - 1];
+      initSimulationRoute(start.lat, start.lng, end.lat, end.lng);
+    }
+    setSimulationSlider(val);
+  }, [isSimulator, routeCoords, initSimulationRoute, setSimulationSlider]);
+
+  // ── Loading guard ──
   if (!mounted) {
     return (
       <div className="flex flex-col h-screen bg-slate-950 items-center justify-center p-8 text-center">
@@ -557,7 +646,7 @@ const TrackingPage = () => {
           <Activity size={40} />
         </div>
         <h1 className="text-3xl font-light text-gradient tracking-tighter mb-4 leading-none">Establishing Satellite Lock</h1>
-        <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.3em]">Preparing Route Visualization... v3.0</p>
+        <p className="text-slate-500 font-mono text-[10px] uppercase tracking-[0.3em]">Preparing Route Visualization... v3.1</p>
       </div>
     );
   }
@@ -585,10 +674,17 @@ const TrackingPage = () => {
 
           <MapObserver setMapZoom={setMapZoom} />
 
-          {/* Fit bounds to the clipped route; recenterKey triggers explicit recenter */}
-          <MapBoundsController routeCoords={routeCoords} recenterKey={recenterKey} />
+          {/* Auto-follow user GPS position */}
+          <AutoFollowController 
+            position={userMarkerPos} 
+            autoFollow={autoFollow} 
+            recenterKey={recenterKey}
+          />
 
-          {/* Completed + remaining route polylines */}
+          {/* Fit bounds to the clipped route (initial only) */}
+          <MapBoundsController routeCoords={routeCoords} recenterKey={0} />
+
+          {/* Completed (dotted) + remaining (solid) route polylines */}
           <RoutePolylines routeCoords={routeCoords} currentStationIdx={routeCurrentIdx} />
 
           {/* Animated train marker at current station */}
@@ -612,24 +708,82 @@ const TrackingPage = () => {
         </MapContainer>
       </div>
 
-      {/* ══════════ RECENTER BUTTON ══════════ */}
-      <button
-        onClick={() => setRecenterKey(k => k + 1)}
-        className="absolute right-5 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-brand-cyan shadow-xl hover:bg-slate-800/90 transition-all"
-        title="Recenter map"
-      >
-        <LocateFixed size={20} />
-      </button>
+      {/* ══════════ MAP CONTROLS (RIGHT SIDE) ══════════ */}
+      <div className="absolute right-5 top-1/2 -translate-y-1/2 z-20 flex flex-col space-y-3">
+        {/* Recenter */}
+        <button
+          onClick={() => setRecenterKey(k => k + 1)}
+          className="w-12 h-12 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-brand-cyan shadow-xl hover:bg-slate-800/90 transition-all"
+          title="Recenter map"
+        >
+          <LocateFixed size={20} />
+        </button>
 
-      {/* ══════════ DEBUG TEST MODE BUTTON ══════════ */}
-      <button
-        onClick={() => setIsDebugActive(!isDebugActive)}
-        className={`absolute right-5 top-[60%] -translate-y-1/2 z-20 px-3 h-10 bg-slate-900/90 backdrop-blur-md border ${isDebugActive ? 'border-amber-500/50 text-amber-400' : 'border-white/10 text-slate-400'} rounded-xl flex items-center space-x-2 shadow-xl hover:bg-slate-800/90 transition-all font-bold text-[10px] uppercase tracking-widest`}
-      >
-        <Terminal size={14} />
-        <span className="hidden sm:inline">Tracking Test Mode</span>
-        <span className="sm:hidden">Test Mode</span>
-      </button>
+        {/* Auto-follow toggle */}
+        <button
+          onClick={() => setAutoFollow(!autoFollow)}
+          className={`w-12 h-12 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${autoFollow ? 'border-brand-cyan/50 text-brand-cyan' : 'border-white/10 text-slate-500'}`}
+          title={autoFollow ? 'Auto-follow ON' : 'Auto-follow OFF'}
+        >
+          <Navigation size={18} className={autoFollow ? 'fill-current' : ''} />
+        </button>
+
+        {/* Debug toggle */}
+        <button
+          onClick={() => setIsDebugActive(!isDebugActive)}
+          className={`w-12 h-12 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${isDebugActive ? 'border-amber-500/50 text-amber-400' : 'border-white/10 text-slate-400'}`}
+          title="Toggle Debug Mode"
+        >
+          <Terminal size={18} />
+        </button>
+
+        {/* Simulation toggle */}
+        <button
+          onClick={() => setIsSimSliderActive(!isSimSliderActive)}
+          className={`w-12 h-12 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${isSimSliderActive ? 'border-violet-500/50 text-violet-400' : 'border-white/10 text-slate-400'}`}
+          title="Simulation Mode"
+        >
+          <Sliders size={18} />
+        </button>
+      </div>
+
+      {/* ══════════ SIMULATION SLIDER ══════════ */}
+      <AnimatePresence>
+        {isSimSliderActive && (
+          <m.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-[280px] left-5 right-20 z-20"
+          >
+            <div className="glass-darker p-4 rounded-2xl border border-violet-500/30 shadow-2xl bg-black/80">
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center space-x-2">
+                  <Play size={12} className="text-violet-400" />
+                  <span className="text-[10px] font-black text-violet-400 uppercase tracking-widest">Simulation Mode</span>
+                </div>
+                <span className="text-[10px] font-mono text-white">{Math.round(simSliderValue)}%</span>
+              </div>
+              <input
+                type="range"
+                min="0"
+                max="100"
+                step="0.5"
+                value={simSliderValue}
+                onChange={handleSimSlider}
+                className="w-full h-2 rounded-full appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right, #8b5cf6 ${simSliderValue}%, #1e293b ${simSliderValue}%)`,
+                }}
+              />
+              <div className="flex justify-between mt-1">
+                <span className="text-[9px] text-slate-600 font-bold">🚉 Start</span>
+                <span className="text-[9px] text-slate-600 font-bold">🎯 Destination</span>
+              </div>
+            </div>
+          </m.div>
+        )}
+      </AnimatePresence>
 
       {/* ══════════ DEBUG PANEL ══════════ */}
       <AnimatePresence>
@@ -638,12 +792,12 @@ const TrackingPage = () => {
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute right-5 top-[35%] z-[25] w-64 glass-darker p-4 rounded-3xl border border-amber-500/30 shadow-2xl bg-black/80"
+            className="absolute right-5 top-[12%] z-[25] w-64 glass-darker p-4 rounded-3xl border border-amber-500/30 shadow-2xl bg-black/80 max-h-[70vh] flex flex-col"
           >
             <div className="flex items-center justify-between mb-3 border-b border-white/10 pb-2">
               <div className="flex items-center space-x-2">
                 <Terminal size={14} className="text-amber-400" />
-                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Tracking Debug Mode</span>
+                <span className="text-[10px] font-black text-amber-400 uppercase tracking-widest">Debug Mode</span>
               </div>
               <button onClick={() => setIsDebugActive(false)} className="text-slate-400 hover:text-white">
                 <X size={14} />
@@ -651,96 +805,120 @@ const TrackingPage = () => {
             </div>
 
             {debugData ? (
-              <div className="space-y-3 max-h-[55vh] overflow-y-auto pr-1 pb-1 custom-scrollbar">
+              <div className="space-y-3 overflow-y-auto pr-1 pb-1 flex-1" style={{ scrollbarWidth: 'thin' }}>
                 
                 {/* Error/Warning Banners */}
                 {debugData.gps.stale && (
                   <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-2 text-[9px] font-black uppercase tracking-widest rounded-xl text-center">
-                    Warning: GPS not updating!
+                    ⚠️ GPS not updating!
                   </div>
                 )}
                 {debugData.tracking.etaStale && (
                   <div className="bg-red-500/10 border border-red-500/30 text-red-400 p-2 text-[9px] font-black uppercase tracking-widest rounded-xl text-center">
-                    Error: ETA not changing!
+                    ❌ ETA not changing!
                   </div>
                 )}
 
-                {/* GPS Diagnostics */}
+                {/* GPS Section */}
                 <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
-                  <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">GPS Diagnostics</h4>
+                  <h4 className="text-[9px] font-black text-amber-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">📡 GPS</h4>
                   <div className="grid grid-cols-2 gap-y-2 text-[10px]">
                     <div className="col-span-2 flex justify-between">
-                      <span className="text-slate-500">GPS Permission:</span> 
-                      <span className={debugData.gps.permission === 'GRANTED' ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{debugData.gps.permission}</span>
+                      <span className="text-slate-500">Permission:</span> 
+                      <StatusBadge value={debugData.gps.permission} greenWhen={debugData.gps.permission === 'GRANTED'} />
                     </div>
-                    <div><span className="text-slate-500">Cur Lat:</span> <span className="text-white font-mono">{debugData.gps.lat}</span></div>
-                    <div><span className="text-slate-500">Cur Lng:</span> <span className="text-white font-mono">{debugData.gps.lng}</span></div>
+                    <div><span className="text-slate-500">Lat:</span> <span className="text-white font-mono">{debugData.gps.lat}</span></div>
+                    <div><span className="text-slate-500">Lng:</span> <span className="text-white font-mono">{debugData.gps.lng}</span></div>
                     <div>
                       <span className="text-slate-500">Accuracy:</span>{' '}
-                      <span className={`font-mono font-bold ${debugData.gps.accuracy === '--' ? 'text-slate-400' : debugData.gps.accuracy <= 20 ? 'text-green-400' : debugData.gps.accuracy <= 50 ? 'text-amber-400' : 'text-red-400'}`}>{debugData.gps.accuracy}m</span>
+                      <StatusBadge 
+                        value={`${debugData.gps.accuracy}m`} 
+                        greenWhen={debugData.gps.accuracy !== '--' && debugData.gps.accuracy <= 20} 
+                        yellowWhen={debugData.gps.accuracy !== '--' && debugData.gps.accuracy <= 50} 
+                      />
                     </div>
                     <div><span className="text-slate-500">Interval:</span> <span className="text-blue-400 font-mono">{debugData.gps.interval}</span></div>
-                    <div className="col-span-2 flex justify-between">
-                      <span className="text-slate-500">Last Update:</span>
-                      <span className="text-white font-mono">{debugData.gps.lastUpdate}</span>
-                    </div>
                   </div>
                 </div>
 
-                {/* Tracking Diagnostics */}
+                {/* Tracking Section */}
                 <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
-                  <h4 className="text-[9px] font-black text-cyan-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">Tracking Diagnostics</h4>
+                  <h4 className="text-[9px] font-black text-cyan-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">🚂 Tracking</h4>
                   <div className="grid grid-cols-2 gap-y-2 text-[10px]">
                     <div className="flex justify-between col-span-2">
-                      <span className="text-slate-500">Tracking Active:</span> 
-                      <span className={debugData.tracking.active === 'Yes' ? 'text-green-400 font-bold' : 'text-slate-500'}>{debugData.tracking.active}</span>
+                      <span className="text-slate-500">Active:</span> 
+                      <StatusBadge value={debugData.tracking.active} greenWhen={debugData.tracking.active === 'Yes'} />
                     </div>
                     <div><span className="text-slate-500">Mode:</span> <span className="text-white font-mono uppercase">{debugData.tracking.mode}</span></div>
                     <div>
                       <span className="text-slate-500">Speed:</span>{' '}
-                      <span className={`font-mono font-bold ${debugData.tracking.speed > 0 ? 'text-green-400' : 'text-amber-400'}`}>{debugData.tracking.speed} km/h</span>
+                      <StatusBadge 
+                        value={`${debugData.tracking.speed} km/h`} 
+                        greenWhen={debugData.tracking.speed > 0} 
+                        yellowWhen={debugData.tracking.speed === 0} 
+                      />
                     </div>
                     <div className="col-span-2 flex justify-between">
-                      <span className="text-slate-500">Distance to Dest:</span>
+                      <span className="text-slate-500">Distance:</span>
                       <span className="text-white font-mono">{debugData.tracking.distance} km</span>
                     </div>
                     <div className="col-span-2 flex justify-between">
-                      <span className="text-slate-500">ETA Remaining:</span> 
-                      <span className={`font-mono ${debugData.tracking.etaStale ? 'text-red-400 font-bold' : 'text-white'}`}>{debugData.tracking.eta} mins</span>
+                      <span className="text-slate-500">ETA:</span> 
+                      <StatusBadge 
+                        value={`${debugData.tracking.eta} mins`} 
+                        greenWhen={!debugData.tracking.etaStale && debugData.tracking.eta !== '--'} 
+                        yellowWhen={debugData.tracking.etaStale} 
+                      />
                     </div>
                   </div>
                 </div>
 
-                {/* Route Diagnostics */}
+                {/* Route Section */}
                 <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
-                  <h4 className="text-[9px] font-black text-violet-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">Route Diagnostics</h4>
+                  <h4 className="text-[9px] font-black text-violet-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">🗺️ Route</h4>
                   <div className="grid grid-cols-2 gap-y-2 text-[10px]">
-                    <div className="flex justify-between"><span className="text-slate-500">Total Stops:</span> <span className="text-white font-mono">{debugData.route.totalStops}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Completed:</span> <span className="text-green-400 font-mono font-bold">{debugData.route.completed}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Remaining:</span> <span className="text-amber-400 font-mono font-bold">{debugData.route.remaining}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Total:</span> <span className="text-white font-mono">{debugData.route.totalStops}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Done:</span> <StatusBadge value={debugData.route.completed} greenWhen={debugData.route.completed > 0} /></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Left:</span> <StatusBadge value={debugData.route.remaining} yellowWhen={debugData.route.remaining > 0} greenWhen={debugData.route.remaining === 0} /></div>
                     <div className="flex justify-between"><span className="text-slate-500">Progress:</span> <span className="text-white font-mono">{debugData.route.progressPercent}%</span></div>
                   </div>
                 </div>
 
-                {/* Map Diagnostics */}
+                {/* Map Section */}
                 <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
-                  <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">Map Diagnostics</h4>
+                  <h4 className="text-[9px] font-black text-emerald-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">🗺️ Map</h4>
                   <div className="grid grid-cols-1 gap-y-2 text-[10px]">
-                    <div className="flex justify-between"><span className="text-slate-500">Marker Visible:</span> <span className={debugData.map.markerVisible === 'Yes' ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{debugData.map.markerVisible}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Route Visible:</span> <span className={debugData.map.routeVisible === 'Yes' ? 'text-green-400 font-bold' : 'text-red-400 font-bold'}>{debugData.map.routeVisible}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Remaining Dotted:</span> <span className={debugData.map.dottedVisible === 'Yes' ? 'text-green-400 font-bold' : 'text-amber-400'}>{debugData.map.dottedVisible}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Map Follow User:</span> <span className={debugData.map.followActive === 'Yes' ? 'text-green-400 font-bold' : 'text-slate-400'}>{debugData.map.followActive}</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Current Zoom:</span> <span className="text-white font-mono">{debugData.map.zoom}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Marker:</span> <StatusBadge value={debugData.map.markerVisible} greenWhen={debugData.map.markerVisible === 'Yes'} /></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Route:</span> <StatusBadge value={debugData.map.routeVisible} greenWhen={debugData.map.routeVisible === 'Yes'} /></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Auto-Follow:</span> <StatusBadge value={debugData.map.followActive} greenWhen={debugData.map.followActive === 'Yes'} /></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Zoom:</span> <span className="text-white font-mono">{debugData.map.zoom}</span></div>
                   </div>
                 </div>
 
-                {/* Alarm Diagnostics */}
+                {/* Alarm Section */}
                 <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
-                  <h4 className="text-[9px] font-black text-rose-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">Alarm</h4>
+                  <h4 className="text-[9px] font-black text-rose-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">🔔 Alarm</h4>
                   <div className="grid grid-cols-1 gap-y-2 text-[10px]">
-                    <div className="flex justify-between"><span className="text-slate-500">Distance to Dest:</span> <span className="text-white font-mono">{debugData.alarm.distanceToDest} km</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Alert Radius:</span> <span className="text-white font-mono">{debugData.alarm.alertRadius} km</span></div>
-                    <div className="flex justify-between"><span className="text-slate-500">Status:</span> <span className="text-amber-400 font-bold uppercase">{debugData.alarm.status}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Dist to Dest:</span> <span className="text-white font-mono">{debugData.alarm.distanceToDest} km</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Radius:</span> <span className="text-white font-mono">{debugData.alarm.alertRadius} km</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Status:</span> <StatusBadge value={debugData.alarm.status} yellowWhen={debugData.alarm.status === 'Standby'} greenWhen={debugData.alarm.status === 'TRIGGERED'} /></div>
+                  </div>
+                </div>
+
+                {/* Performance Section */}
+                <div className="bg-white/5 p-3 rounded-2xl border border-white/10 space-y-2">
+                  <h4 className="text-[9px] font-black text-blue-500 uppercase tracking-widest border-b border-white/10 pb-1.5 mb-2">⚡ Performance</h4>
+                  <div className="grid grid-cols-1 gap-y-2 text-[10px]">
+                    <div className="flex justify-between">
+                      <span className="text-slate-500">API Response:</span> 
+                      <StatusBadge 
+                        value={`${debugData.performance.apiResponseMs}ms`} 
+                        greenWhen={debugData.performance.apiResponseMs !== '--' && debugData.performance.apiResponseMs < 2000} 
+                        yellowWhen={debugData.performance.apiResponseMs !== '--' && debugData.performance.apiResponseMs < 5000} 
+                      />
+                    </div>
+                    <div className="flex justify-between"><span className="text-slate-500">GPS Interval:</span> <span className="text-green-400 font-mono">{debugData.performance.gpsUpdateInterval}</span></div>
+                    <div className="flex justify-between"><span className="text-slate-500">Map Render:</span> <StatusBadge value={debugData.performance.mapSmooth} greenWhen={debugData.performance.mapSmooth === 'OK'} /></div>
                   </div>
                 </div>
 
@@ -754,7 +932,7 @@ const TrackingPage = () => {
 
             <button
               onClick={exportDebugLog}
-              className="mt-4 w-full py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center space-x-2 hover:bg-amber-500/20 active:scale-[0.98] transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-900/20"
+              className="mt-3 w-full py-2.5 bg-amber-500/10 border border-amber-500/30 text-amber-400 rounded-xl flex items-center justify-center space-x-2 hover:bg-amber-500/20 active:scale-[0.98] transition-all font-black text-[10px] uppercase tracking-widest shadow-lg shadow-amber-900/20 flex-shrink-0"
             >
               <Download size={14} />
               <span>Export Debug Logs</span>
@@ -820,24 +998,19 @@ const TrackingPage = () => {
                     <span className="text-[10px] font-bold text-slate-500">{routeCoords?.length ?? 0} STOPS</span>
                   </div>
 
-                  {/* Station timeline: Origin → Current → Destination */}
+                  {/* Station timeline */}
                   <div className="relative pl-6 space-y-4 before:absolute before:left-2 before:top-2 before:bottom-2 before:w-[1px] before:bg-white/10">
-                    {/* Origin */}
                     <div className="relative">
                       <div className="absolute -left-[1.35rem] top-1 w-3 h-3 rounded-full bg-slate-600 ring-4 ring-slate-950" />
                       <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Origin</p>
                       <p className="text-sm font-light text-white">{originStop?.station ?? originStop?.stopName ?? '--'}</p>
                     </div>
-
-                    {/* Current station (train position) */}
                     <div className="relative">
                       <div className="absolute -left-[1.35rem] top-1 w-3 h-3 rounded-full bg-brand-cyan shadow-lg shadow-cyan-950 ring-4 ring-slate-950" />
                       <p className="text-[8px] font-black text-brand-cyan uppercase tracking-widest">🚂 Now At</p>
                       <p className="text-sm font-semibold text-white">{currentStopName}</p>
                       <p className="text-[9px] text-slate-600">{stopsRemaining} stop{stopsRemaining !== 1 ? 's' : ''} to destination</p>
                     </div>
-
-                    {/* Destination */}
                     <div className="relative">
                       <div className={`absolute -left-[1.35rem] top-1 w-3 h-3 rounded-full ${stopsRemaining === 0 ? 'bg-green-500 animate-pulse' : 'bg-slate-700'} ring-4 ring-slate-950`} />
                       <p className="text-[8px] font-black text-slate-500 uppercase tracking-widest">Destination</p>

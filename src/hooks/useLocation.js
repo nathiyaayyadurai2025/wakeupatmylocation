@@ -1,14 +1,17 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 
 export const useLocation = () => {
   const [location, setLocation] = useState(null);
   const [error, setError] = useState(null);
   const [accuracy, setAccuracy] = useState(null);
+  const [speed, setSpeed] = useState(null); // m/s from GPS
   const [isSimulator, setIsSimulator] = useState(false);
+  const [simulationProgress, setSimulationProgress] = useState(0); // 0–100 for slider
   const watchIdRef = useRef(null);
   const journeyIntervalRef = useRef(null);
+  const simRouteRef = useRef(null); // stores {startLat, startLng, targetLat, targetLng}
 
-  const stopTracking = () => {
+  const stopTracking = useCallback(() => {
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
@@ -17,34 +20,69 @@ export const useLocation = () => {
       clearInterval(journeyIntervalRef.current);
       journeyIntervalRef.current = null;
     }
-  };
+  }, []);
 
-  const startJourneySimulation = (startLat, startLng, targetLat, targetLng, durationMinutes = 2) => {
+  // Simulation: auto-play journey from start to target
+  const startJourneySimulation = useCallback((startLat, startLng, targetLat, targetLng, durationMinutes = 2) => {
     stopTracking();
     setIsSimulator(true);
+    setSimulationProgress(0);
+    simRouteRef.current = { startLat, startLng, targetLat, targetLng };
+
     let elapsed = 0;
     const intervalTime = 2000; // Update every 2 seconds
     const totalSlots = (durationMinutes * 60 * 1000) / intervalTime;
 
     journeyIntervalRef.current = setInterval(() => {
       elapsed++;
-      const progress = elapsed / totalSlots;
+      const progress = Math.min(elapsed / totalSlots, 1);
+      setSimulationProgress(progress * 100);
+      
       if (progress >= 1) {
         clearInterval(journeyIntervalRef.current);
+        journeyIntervalRef.current = null;
       }
       const curLat = startLat + (targetLat - startLat) * progress;
       const curLng = startLng + (targetLng - startLng) * progress;
-      setLocation({ lat: curLat, lng: curLng });
+      setLocation({ lat: curLat, lng: curLng, accuracy: 5, speed: 20 }); // ~72km/h simulated
       setAccuracy(5);
+      setSpeed(20);
       setError(null);
     }, intervalTime);
-  };
+  }, [stopTracking]);
 
-  const [pollingInterval, setPollingInterval] = useState(10000); // Default 10s
+  // Simulation: manual slider (0–100) — moves position along the route
+  const setSimulationSlider = useCallback((percent) => {
+    if (!simRouteRef.current) return;
+    const { startLat, startLng, targetLat, targetLng } = simRouteRef.current;
+    const p = percent / 100;
+    const curLat = startLat + (targetLat - startLat) * p;
+    const curLng = startLng + (targetLng - startLng) * p;
+    setSimulationProgress(percent);
+    setLocation({ lat: curLat, lng: curLng, accuracy: 5, speed: 20 });
+    setAccuracy(5);
+    setSpeed(20);
+    setError(null);
+  }, []);
+
+  // Initialize simulation route without auto-play
+  const initSimulationRoute = useCallback((startLat, startLng, targetLat, targetLng) => {
+    stopTracking();
+    setIsSimulator(true);
+    setSimulationProgress(0);
+    simRouteRef.current = { startLat, startLng, targetLat, targetLng };
+    // Set initial position at start
+    setLocation({ lat: startLat, lng: startLng, accuracy: 5, speed: 0 });
+    setAccuracy(5);
+    setSpeed(0);
+    setError(null);
+  }, [stopTracking]);
+
+  const [pollingInterval, setPollingInterval] = useState(5000); // Default 5s for performance
   const [batterySaver, setBatterySaver] = useState(false);
 
-  const startTracking = (forcedInterval) => {
-    const interval = forcedInterval || (batterySaver ? 30000 : 10000);
+  const startTracking = useCallback((forcedInterval) => {
+    const interval = forcedInterval || (batterySaver ? 15000 : 5000);
     setPollingInterval(interval);
 
     if (journeyIntervalRef.current !== null) {
@@ -64,16 +102,19 @@ export const useLocation = () => {
 
     const geolocationOptions = {
       enableHighAccuracy: !batterySaver,
-      timeout: 30000, // Increased to 30s to permanently solve Timeout errors
+      timeout: 30000,
       maximumAge: batterySaver ? 10000 : 0
     };
 
     const handleSuccess = (position) => {
       setLocation({
         lat: position.coords.latitude,
-        lng: position.coords.longitude
+        lng: position.coords.longitude,
+        accuracy: position.coords.accuracy,
+        speed: position.coords.speed, // m/s or null
       });
       setAccuracy(position.coords.accuracy);
+      setSpeed(position.coords.speed);
       setError(null);
     };
 
@@ -84,7 +125,6 @@ export const useLocation = () => {
       if (err.code === 3 || err.code === 2) {
          setError("Signal Obstructed (Searching Satellite...)");
          
-         // Clear the current watch and switch to a 10s Poll Heartbeat
          if (watchIdRef.current) {
             navigator.geolocation.clearWatch(watchIdRef.current);
             watchIdRef.current = null;
@@ -100,7 +140,7 @@ export const useLocation = () => {
               );
             };
             poll();
-            journeyIntervalRef.current = setInterval(poll, 15000);
+            journeyIntervalRef.current = setInterval(poll, 10000);
          }
       } else if (err.code === 1) {
          setError("GPS Permission Denied. Check Settings.");
@@ -115,17 +155,19 @@ export const useLocation = () => {
       handleError,
       geolocationOptions
     );
-  };
+  }, [batterySaver]);
 
   useEffect(() => {
     return () => stopTracking();
-  }, []);
+  }, [stopTracking]);
 
   return { 
     location, 
     error, 
-    inaccuracy: accuracy, 
+    inaccuracy: accuracy,
+    speed,
     isSimulator,
+    simulationProgress,
     batterySaver,
     setBatterySaver,
     pollingInterval,
@@ -133,6 +175,8 @@ export const useLocation = () => {
     startTracking, 
     stopTracking, 
     startJourneySimulation,
+    initSimulationRoute,
+    setSimulationSlider,
     setError 
   };
 };

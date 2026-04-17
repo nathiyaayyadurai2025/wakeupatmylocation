@@ -94,9 +94,14 @@ const useNominatimSearch = (userLocation) => {
         // Primary generic search
         let data = await fetchNominatim(query.trim());
 
-        // Tamil Nadu specific fallback hook
+        // Tamil Nadu specific fallback
         if (!data || data.length === 0) {
           data = await fetchNominatim(`${query.trim()}, Tamil Nadu, India`);
+        }
+
+        // India-wide fallback for villages and small places
+        if (!data || data.length === 0) {
+          data = await fetchNominatim(`${query.trim()}, India`);
         }
 
         if (data && data.length > 0) {
