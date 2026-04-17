@@ -45,5 +45,10 @@ To run this project locally, you need a MongoDB database:
 - **Backend**: Node.js + Express + Vercel Functions (Serverless Heartbeat).
 - **Navigation**: Geolocation API (SPS Precision) + Leaflet (Cartographic Sync).
 
+## 🛡️ Mission Security & Stability
+- **Environment Isolation**: Secure `.env` handling for API credentials.
+- **Vercel Shield**: Serverless architecture redundant across global regions.
+- **Fail-Safe Mode**: Automatic fallback to local constants if API heartbeat is lost.
+
 **Your destination is our mission.**
-© 2026 WakeMyStop. Sync Status: Ready for High-Speed Deployment.
+© 2026 WakeMyStop. 📡 **Sync Status**: [ONLINE] Production-Grade & Fully Synchronized.
