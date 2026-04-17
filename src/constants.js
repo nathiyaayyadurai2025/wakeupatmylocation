@@ -41,72 +41,22 @@ export const TRAIN_DATA = [
     "trainNumber": "12637",
     "trainName": "Pandian Express",
     "from": "Chennai Egmore",
-    "to": "Madurai",
+    "to": "Madurai Junction",
     "stops": [
-      {
-        "station": "Chennai Egmore",
-        "arrival": "--",
-        "departure": "21:40",
-        "lat": 13.0822,
-        "lng": 80.2585,
-        "km": 0
-      },
-      {
-        "station": "Tambaram",
-        "arrival": "22:08",
-        "departure": "22:10",
-        "lat": 12.9249,
-        "lng": 80.1165,
-        "km": 24
-      },
-      {
-        "station": "Chengalpattu",
-        "arrival": "22:38",
-        "departure": "22:40",
-        "lat": 12.6921,
-        "lng": 79.9766,
-        "km": 53
-      },
-      {
-        "station": "Villupuram",
-        "arrival": "23:55",
-        "departure": "00:05",
-        "lat": 11.9401,
-        "lng": 79.4861,
-        "km": 152
-      },
-      {
-        "station": "Vriddhachalam",
-        "arrival": "00:48",
-        "departure": "00:50",
-        "lat": 11.5165,
-        "lng": 79.3245,
-        "km": 202
-      },
-      {
-        "station": "Tiruchirappalli",
-        "arrival": "02:45",
-        "departure": "02:50",
-        "lat": 10.7905,
-        "lng": 78.7047,
-        "km": 308
-      },
-      {
-        "station": "Dindigul",
-        "arrival": "04:02",
-        "departure": "04:05",
-        "lat": 10.3673,
-        "lng": 77.9803,
-        "km": 401
-      },
-      {
-        "station": "Madurai",
-        "arrival": "05:25",
-        "departure": "--",
-        "lat": 9.9252,
-        "lng": 78.1198,
-        "km": 452
-      }
+      { "station": "Chennai Egmore", "arrival": "START", "departure": "21:40", "lat": 13.0822, "lng": 80.2585, "km": 0 },
+      { "station": "Tambaram", "arrival": "22:08", "departure": "22:10", "lat": 12.9249, "lng": 80.1165, "km": 24 },
+      { "station": "Chengalpattu Junction", "arrival": "22:38", "departure": "22:40", "lat": 12.6921, "lng": 79.9766, "km": 53 },
+      { "station": "Villupuram Junction", "arrival": "23:55", "departure": "00:05", "lat": 11.9401, "lng": 79.4861, "km": 152 },
+      { "station": "Vridhachalam Junction", "arrival": "00:48", "departure": "00:50", "lat": 11.5165, "lng": 79.3245, "km": 202 },
+      { "station": "Ariyalur", "arrival": "01:24", "departure": "01:25", "lat": 11.1396, "lng": 79.0734, "km": 253 },
+      { "station": "Lalgudi", "arrival": "02:00", "departure": "02:01", "lat": 10.8667, "lng": 78.8167, "km": 285 },
+      { "station": "Srirangam", "arrival": "02:15", "departure": "02:17", "lat": 10.8572, "lng": 78.6933, "km": 298 },
+      { "station": "Tiruchchirappalli Junction", "arrival": "02:45", "departure": "02:50", "lat": 10.7905, "lng": 78.7047, "km": 308 },
+      { "station": "Manaparai", "arrival": "03:15", "departure": "03:16", "lat": 10.603, "lng": 78.421, "km": 345 },
+      { "station": "Dindigul Junction", "arrival": "04:02", "departure": "04:05", "lat": 10.3673, "lng": 77.9803, "km": 401 },
+      { "station": "Ambaturai", "arrival": "04:20", "departure": "04:21", "lat": 10.29, "lng": 77.87, "km": 412 },
+      { "station": "Kodaikanal Road", "arrival": "04:35", "departure": "04:36", "lat": 10.24, "lng": 77.8, "km": 423 },
+      { "station": "Madurai Junction", "arrival": "05:25", "departure": "END", "lat": 9.9252, "lng": 78.1198, "km": 452 }
     ]
   },
   {
