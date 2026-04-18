@@ -2,8 +2,8 @@ import React, { useState, useEffect, useRef } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { motion as m, AnimatePresence } from 'framer-motion';
-import { MapPin, Train, Search, Navigation, Bell, AlertTriangle, Check, Loader2, Play } from 'lucide-react';
-import { CALCULATE_DISTANCE, TRAIN_DATA } from '../constants';
+import { MapPin, Train, Search, Navigation, Bell, AlertTriangle, Check, Loader2, Play, X, WifiOff } from 'lucide-react';
+import { TRAIN_DATA } from '../constants';
 import 'leaflet/dist/leaflet.css';
 
 // Fix Leaflet Default Icon
@@ -13,6 +13,15 @@ L.Icon.Default.mergeOptions({
   iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
+
+// Helper for overriding Haversine directly
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
 
 // Custom Icons
 const createBlueDot = () => L.divIcon({
@@ -43,9 +52,8 @@ const createStationPin = () => L.divIcon({
   </div>`
 });
 
-// Web Audio API Alarm Setup
+// Web Audio API Setup
 let audioCtx = null;
-let oscillatorArray = [];
 let alarmInterval = null;
 
 const initAudioContext = () => {
@@ -56,42 +64,37 @@ const initAudioContext = () => {
   if (audioCtx.state === 'suspended') {
     audioCtx.resume();
   }
+  return audioCtx;
 };
 
-const playLoudBeep = () => {
-  if (!audioCtx) initAudioContext();
-  const osc = audioCtx.createOscillator();
-  const gainNode = audioCtx.createGain();
+// 880Hz Oscillator Alarm
+const playOscillatorAlarm = (ctx) => {
+  const osc = ctx.createOscillator();
+  osc.frequency.value = 880;
   
-  osc.type = 'square';
-  osc.frequency.setValueAtTime(800, audioCtx.currentTime); // High pitch
-  osc.frequency.exponentialRampToValueAtTime(1200, audioCtx.currentTime + 0.2);
-  
-  gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.5);
+  const gainNode = ctx.createGain();
+  gainNode.gain.setValueAtTime(1, ctx.currentTime);
+  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
   
   osc.connect(gainNode);
-  gainNode.connect(audioCtx.destination);
+  gainNode.connect(ctx.destination);
   
   osc.start();
-  osc.stop(audioCtx.currentTime + 0.5);
-  oscillatorArray.push(osc);
-  
-  if (navigator.vibrate) {
-    navigator.vibrate([300, 100, 300, 100, 300]);
-  }
+  osc.stop(ctx.currentTime + 0.5);
 };
 
-const startAlarmSequence = () => {
-  initAudioContext();
-  if (navigator.vibrate) navigator.vibrate([1000, 500, 1000, 500, 1000]);
-  playLoudBeep();
+const triggerAlarmEffects = () => {
+  const ctx = initAudioContext();
+  playOscillatorAlarm(ctx);
   if (!alarmInterval) {
-    alarmInterval = setInterval(playLoudBeep, 1000);
+    alarmInterval = setInterval(() => playOscillatorAlarm(ctx), 1000);
+  }
+  if (navigator.vibrate) {
+    navigator.vibrate([500, 200, 500, 200, 500]);
   }
 };
 
-const stopAlarmSequence = () => {
+const stopAlarmEffects = () => {
   if (alarmInterval) {
     clearInterval(alarmInterval);
     alarmInterval = null;
@@ -110,46 +113,78 @@ const MapAutoCenter = ({ position, zoom }) => {
   return null;
 };
 
-// Main Application Flow
+const STEPS = ['Location', 'Stations', 'Trains', 'Set Alarm', 'Tracking'];
+
 export default function TrainAlarmFlow() {
-  const [step, setStep] = useState(1); // 1: Locating, 2: Stations, 3: Trains, 4: Destinations, 5: Tracking
+  const [step, setStep] = useState(1);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+  
+  // Geolocation states
   const [userLocation, setUserLocation] = useState(null);
   const [locationError, setLocationError] = useState(false);
+  const watchIdRef = useRef(null);
   
+  // Station search states
   const [stations, setStations] = useState([]);
   const [selectedStation, setSelectedStation] = useState(null);
   
+  // Train search states
   const [trains, setTrains] = useState([]);
+  const [searchTrainQuery, setSearchTrainQuery] = useState('');
   const [selectedTrain, setSelectedTrain] = useState(null);
   
+  // Alarm destination state
+  const [selectedDestStop, setSelectedDestStop] = useState(null);
   const [destination, setDestination] = useState(null);
   const [distanceRemaining, setDistanceRemaining] = useState(null);
+  const [progressPercent, setProgressPercent] = useState(0);
   
+  // Active states
   const [alarmTriggered, setAlarmTriggered] = useState(false);
-  const watchIdRef = useRef(null);
+  const [existingAlarmPrompt, setExistingAlarmPrompt] = useState(false);
+  const [dataError, setDataError] = useState('');
+
+  // Online offline listener
+  useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Resume state from localStorage on load
   useEffect(() => {
     const savedDest = localStorage.getItem('wakeMyStop_dest');
+    const dismissed = localStorage.getItem('wakeMyStop_dismissed');
+    
     if (savedDest) {
       const parsed = JSON.parse(savedDest);
       setDestination(parsed);
+      setSelectedTrain({ trainName: parsed.trainName, trainNumber: parsed.trainNumber });
       setStep(5);
+      
+      if (dismissed === 'true') {
+        setAlarmTriggered(true);
+        // Already triggered and dismissed once, don't play sound
+      }
       startLiveTracking(parsed);
     } else {
       locateUser();
     }
     
-    // Clean up tracking on unmount
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
-      stopAlarmSequence();
+      stopAlarmEffects();
     };
   }, []);
 
-  // Step 1: Auto Location
+  // STEP 1: AUTO LOCATION ON LOAD
   const locateUser = () => {
     setStep(1);
     setLocationError(false);
@@ -171,7 +206,7 @@ export default function TrainAlarmFlow() {
     );
   };
 
-  // Step 2: Find Nearby Stations
+  // STEP 2: FIND NEARBY RAILWAY STATIONS
   const fetchStations = async (lat, lon, radius) => {
     setStep(2);
     try {
@@ -182,7 +217,7 @@ export default function TrainAlarmFlow() {
       
       if (data.elements && data.elements.length > 0) {
         const parsedStations = data.elements.map(el => {
-          const dist = CALCULATE_DISTANCE(lat, lon, el.lat, el.lon);
+          const dist = haversine(lat, lon, el.lat, el.lon);
           return {
             id: el.id,
             name: el.tags.name || 'Unnamed Station',
@@ -193,10 +228,9 @@ export default function TrainAlarmFlow() {
         }).sort((a, b) => a.distance - b.distance);
         setStations(parsedStations);
       } else if (radius === 5000) {
-        // Fallback: expand search to 10km automatically
-        fetchStations(lat, lon, 10000);
+        fetchStations(lat, lon, 10000); // fallback expand
       } else {
-        setStations([]); // No stations found even at 10km
+        setStations([]);
       }
     } catch (err) {
       console.error('Overpass API error:', err);
@@ -204,37 +238,71 @@ export default function TrainAlarmFlow() {
     }
   };
 
-  // Step 3: Show Available Trains
-  const handleViewTrains = (station) => {
+  // STEP 3: SHOW AVAILABLE TRAINS
+  const handleViewTrains = async (station) => {
     setSelectedStation(station);
-    // Use fallback TRAIN_DATA since live IRCTC API is not provided natively here
-    // Filter trains that depart from or stop in a similar named station, or just show all for demo
-    // We will show all TRAIN_DATA for demo purposes to assure flow works
-    setTrains(TRAIN_DATA);
+    setSearchTrainQuery('');
     setStep(3);
+    
+    // In real scenario we'd call an API. Falling back to TRAIN_DATA.
+    setTrains(TRAIN_DATA);
   };
 
-  // Step 4: Set Alarm & Destination
+  // Apply search filtering on trains list
+  const filteredTrains = trains.filter(t => 
+    t.trainName.toLowerCase().includes(searchTrainQuery.toLowerCase()) || 
+    t.trainNumber.toLowerCase().includes(searchTrainQuery.toLowerCase())
+  );
+
+  // Set selected train, open stop list (Step 4 setup)
   const handleSelectTrain = (train) => {
+    if (localStorage.getItem('wakeMyStop_dest')) {
+      setExistingAlarmPrompt(true);
+      return;
+    }
     setSelectedTrain(train);
+    setSelectedDestStop(null);
+    setDataError('');
     setStep(4);
   };
 
-  const confirmAlarm = (stop) => {
-    initAudioContext(); // Initialize audio context on user interaction
+  // STEP 4: SET DESTINATION & ALARM
+  const confirmAlarm = () => {
+    if (!selectedDestStop) {
+      setDataError('Cannot set alarm: stop location data unavailable');
+      return;
+    }
+    const lat = selectedDestStop.lat;
+    const lng = selectedDestStop.lng || selectedDestStop.lon;
+    if (!lat || !lng) {
+      setDataError('Cannot set alarm: stop location data unavailable');
+      return;
+    }
+
+    initAudioContext();
+    
+    // Attempt origin coordinates logic for progress bar
+    let originCoord = null;
+    if (selectedTrain?.stops?.length > 0) {
+      originCoord = { lat: selectedTrain.stops[0].lat, lng: selectedTrain.stops[0].lng };
+    }
+
     const destData = {
-      name: stop.station,
-      lat: stop.lat,
-      lng: stop.lng || stop.lon,
-      trainName: selectedTrain.trainName
+      name: selectedDestStop.station,
+      lat, lng,
+      trainName: selectedTrain.trainName,
+      trainNumber: selectedTrain.trainNumber,
+      origin: originCoord
     };
+    
     setDestination(destData);
     localStorage.setItem('wakeMyStop_dest', JSON.stringify(destData));
+    localStorage.removeItem('wakeMyStop_dismissed');
     setStep(5);
     startLiveTracking(destData);
   };
 
-  // Step 5: Live GPS Tracking
+  // STEP 5: LIVE GPS TRACKING
   const startLiveTracking = (dest) => {
     if (!navigator.geolocation) return;
     
@@ -247,74 +315,94 @@ export default function TrainAlarmFlow() {
         const { latitude, longitude } = pos.coords;
         setUserLocation({ lat: latitude, lng: longitude });
         
-        const dist = CALCULATE_DISTANCE(latitude, longitude, dest.lat, dest.lng);
+        const dist = haversine(latitude, longitude, dest.lat, dest.lng);
         setDistanceRemaining(dist);
         
-        if (dist <= 2.0 && !alarmTriggered) {
+        // Compute static progress bar percentage
+        if (dest.origin) {
+          const totalDist = haversine(dest.origin.lat, dest.origin.lng, dest.lat, dest.lng);
+          if (totalDist > 0) {
+            const p = Math.max(0, Math.min(100, ((totalDist - dist) / totalDist) * 100));
+            setProgressPercent(p);
+          }
+        }
+        
+        // Trigger if < 2km and not already dismissed
+        const isDismissed = localStorage.getItem('wakeMyStop_dismissed') === 'true';
+        if (dist < 2.0 && !alarmTriggered && !isDismissed) {
           setAlarmTriggered(true);
-          startAlarmSequence();
+          localStorage.setItem('wakeMyStop_triggered', 'true');
+          triggerAlarmEffects();
         }
       },
       (err) => {
-        console.error("GPS Tracking error", err);
+        console.error("GPS tracking error", err);
+        // Error state: "Location access lost..."
+        setLocationError(true);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
   const handleDismissAlarm = () => {
-    stopAlarmSequence();
+    stopAlarmEffects();
+    // Keep it actively tracking but shut up the alarm
+    localStorage.setItem('wakeMyStop_dismissed', 'true');
     setAlarmTriggered(false);
-    localStorage.removeItem('wakeMyStop_dest');
-    setStep(2); // Go back to stations
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-      watchIdRef.current = null;
-    }
   };
   
   const handleCancelMission = () => {
     localStorage.removeItem('wakeMyStop_dest');
+    localStorage.removeItem('wakeMyStop_triggered');
+    localStorage.removeItem('wakeMyStop_dismissed');
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
-    setStep(2);
-  }
+    setDestination(null);
+    setAlarmTriggered(false);
+    stopAlarmEffects();
+    setStep(2); // Go back to stations
+  };
 
-  // Calculate Map center based on step
-  const mapCenter = userLocation 
-    ? [userLocation.lat, userLocation.lng] 
-    : [13.0827, 80.2707];
+  const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : [13.0827, 80.2707];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden relative">
+    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden relative font-sans">
       
-      {/* Search Bar / Top Bar */}
-      <div className="absolute top-4 left-4 right-4 z-[400]">
-        <div className="glass-darker p-4 rounded-3xl border border-white/5 flex items-center shadow-xl backdrop-blur-xl">
-          <MenuIcon className="text-brand-indigo mr-3" />
-          <div className="flex-1">
-            <p className="text-[10px] uppercase tracking-widest text-slate-500 font-black">WakeMyStop PWA</p>
-            <p className="text-sm font-bold text-white truncate">
-              {step === 1 && "Initializing GPS..."}
-              {step === 2 && "Finding Railway Stations"}
-              {step === 3 && `Trains at ${selectedStation?.name}`}
-              {step === 4 && `Viewing ${selectedTrain?.trainName}`}
-              {step === 5 && "Live Satellite Tracking"}
-            </p>
-          </div>
-          {step === 5 && !alarmTriggered && (
-             <button onClick={handleCancelMission} className="p-2 rounded-full bg-red-500/20 text-red-500">
-               <X size={16} />
-             </button>
-          )}
+      {/* Offline Banner */}
+      {isOffline && (
+        <div className="absolute top-0 left-0 right-0 z-[500] bg-orange-500 text-white text-xs font-bold px-4 py-2 flex items-center justify-center shadow-lg">
+          <WifiOff size={14} className="mr-2" />
+          Offline mode — alarm still active
+        </div>
+      )}
+
+      {/* Step Indicator */}
+      <div className={`absolute left-0 right-0 z-[400] overflow-x-auto whitespace-nowrap px-4 pb-2 transition-all ${isOffline ? 'top-10' : 'top-4'}`}>
+        <div className="flex items-center space-x-2 bg-slate-900/80 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 w-max mx-auto shadow-xl">
+          {STEPS.map((s, idx) => {
+            const stepNum = idx + 1;
+            const isCompleted = step > stepNum;
+            const isActive = step === stepNum;
+            return (
+              <div key={s} className="flex items-center space-x-2">
+                <div className={`flex items-center space-x-1.5 px-2 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider transition-colors
+                  ${isActive ? 'bg-blue-600 text-white' : isCompleted ? 'text-blue-400' : 'text-slate-500'}
+                `}>
+                  {isCompleted && <Check size={12} />}
+                  <span>{stepNum}. {s}</span>
+                </div>
+                {idx < STEPS.length - 1 && <span className="text-slate-700">›</span>}
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Map Background */}
+      {/* Map Layers */}
       <div className="absolute inset-0 z-0">
-        <MapContainer center={mapCenter} zoom={14} zoomControl={false} className="w-full h-full">
+        <MapContainer center={mapCenter} zoom={14} zoomControl={false} className="w-full h-full pb-32">
           <TileLayer
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
             attribution='© OpenStreetMap'
@@ -339,35 +427,45 @@ export default function TrainAlarmFlow() {
               <Circle 
                 center={[destination.lat, destination.lng]} 
                 radius={2000} 
-                pathOptions={{ color: '#ef4444', fillColor: '#ef4444', fillOpacity: 0.1, weight: 2 }} 
+                pathOptions={{ color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.15, weight: 2 }} 
               />
             </>
           )}
         </MapContainer>
       </div>
 
+      {/* Error: GPS Access Lost during tracking */}
+      {step === 5 && locationError && (
+        <div className="absolute top-20 left-4 right-4 z-[400]">
+          <div className="bg-red-500 text-white p-4 rounded-2xl shadow-xl flex items-center">
+            <AlertTriangle className="mr-3" />
+            <div className="text-sm font-bold">Location access lost. Please re-enable GPS.</div>
+          </div>
+        </div>
+      )}
+
       {/* Overlays / Bottom Sheets */}
       <AnimatePresence>
-        {/* Step 1: Loading */}
+        
+        {/* Step 1: Loading Details */}
         {step === 1 && (
           <m.div 
             initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             className="absolute inset-0 z-50 bg-slate-950/80 backdrop-blur flex flex-col items-center justify-center p-6 text-center"
           >
             {locationError ? (
-              <div className="bg-red-500/10 border border-red-500/30 p-6 rounded-3xl max-w-sm">
+              <div className="bg-slate-900 border border-red-500/30 p-6 rounded-3xl max-w-sm">
                 <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-white mb-2">GPS Access Denied</h3>
-                <p className="text-slate-400 text-sm mb-6">Please enable location services and allow GPS permissions to use WakeMyStop travel alarm.</p>
+                <h3 className="text-xl font-bold text-white mb-2">Please enable location</h3>
+                <p className="text-slate-400 text-sm mb-6">Location access is required for tracking securely.</p>
                 <div className="space-y-3">
                   <button onClick={locateUser} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors">Try Again</button>
                   <button 
                     onClick={() => {
-                      // Bypass with Chennai Central coordinates for demo
-                      setUserLocation({ lat: 13.0827, lng: 80.2707 });
+                      setUserLocation({ lat: 13.0827, lng: 80.2707 }); // Chennai Demo
                       fetchStations(13.0827, 80.2707, 5000);
                     }} 
-                    className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-colors"
+                    className="w-full py-3 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold transition-colors"
                   >
                     Start Demo Mode
                   </button>
@@ -375,36 +473,53 @@ export default function TrainAlarmFlow() {
               </div>
             ) : (
               <>
-                <div className="w-20 h-20 rounded-full bg-brand-indigo/20 flex items-center justify-center animate-pulse mb-6 border border-brand-indigo/30">
-                  <Navigation size={32} className="text-brand-indigo" />
+                <div className="w-20 h-20 rounded-full bg-blue-500/20 flex items-center justify-center animate-pulse mb-6 border border-blue-500/30">
+                  <Navigation size={32} className="text-blue-500" />
                 </div>
-                <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Finding Your Location</h2>
-                <p className="text-slate-400 text-sm">Locking onto GPS satellites...</p>
+                <h2 className="text-2xl font-black text-white mb-2 tracking-tight">Finding your location...</h2>
+                <Loader2 size={24} className="animate-spin text-slate-500 mt-4 mx-auto" />
               </>
             )}
+          </m.div>
+        )}
+
+        {/* Existing Alarm Error State */}
+        {existingAlarmPrompt && (
+          <m.div 
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+            className="absolute inset-0 z-[600] bg-black/60 flex items-center justify-center p-6"
+          >
+            <div className="bg-slate-800 p-6 rounded-3xl shadow-2xl border border-slate-700 w-full max-w-sm">
+              <h3 className="text-lg font-bold text-white mb-2">Alarm already active</h3>
+              <p className="text-sm text-slate-400 mb-6">You already have a destination alarm tracking. Please cancel the existing alarm first.</p>
+              <div className="space-y-3">
+                <button onClick={() => { handleCancelMission(); setExistingAlarmPrompt(false); setStep(2); }} className="w-full py-3 bg-red-600 font-bold rounded-xl active:scale-95 transition-all text-white">Cancel Existing Alarm</button>
+                <button onClick={() => setExistingAlarmPrompt(false)} className="w-full py-3 bg-slate-700 font-bold rounded-xl active:scale-95 transition-all text-white">Nevermind</button>
+              </div>
+            </div>
           </m.div>
         )}
 
         {/* Step 2: Stations Sheet */}
         {step === 2 && (
           <BottomSheet>
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">Nearby Railway Stations</h3>
+            <h3 className="text-sm font-bold text-white mb-4">Nearby Railway Stations</h3>
             {stations.length === 0 ? (
                <div className="py-8 text-center text-slate-400 text-sm">
                  <MapPin size={24} className="mx-auto mb-2 opacity-50" />
-                 No stations found within 10km.
+                 No stations found. Expanding search radius...
                </div>
             ) : (
-              <div className="space-y-3 max-h-[50vh] overflow-y-auto pb-6 pr-2">
+              <div className="space-y-3 max-h-[50vh] overflow-y-auto pb-6 pr-2 custom-scrollbar">
                 {stations.map(st => (
-                  <div key={st.id} className="glass-darker p-4 rounded-2xl border border-white/5 flex items-center justify-between">
+                  <div key={st.id} className="bg-slate-800 p-4 rounded-xl border border-slate-700/50 flex items-center justify-between">
                     <div>
-                      <h4 className="font-bold text-white text-md mb-1">{st.name}</h4>
-                      <p className="text-xs text-brand-indigo font-black">{st.distance.toFixed(1)} km away</p>
+                      <h4 className="font-bold text-white text-base mb-0.5">{st.name}</h4>
+                      <p className="text-xs text-blue-400 font-bold">{st.distance.toFixed(1)} km</p>
                     </div>
                     <button 
                       onClick={() => handleViewTrains(st)}
-                      className="px-4 py-2 bg-brand-indigo/10 border border-brand-indigo/20 text-brand-indigo rounded-xl text-xs font-bold whitespace-nowrap active:scale-95 transition-all"
+                      className="px-4 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold whitespace-nowrap active:scale-95 transition-all"
                     >
                       View Trains
                     </button>
@@ -415,118 +530,185 @@ export default function TrainAlarmFlow() {
           </BottomSheet>
         )}
 
-        {/* Step 3: Trains Sheet */}
+        {/* Step 3: Train List Screen */}
         {step === 3 && (
-          <BottomSheet onBack={() => setStep(2)}>
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">Trains at {selectedStation?.name}</h3>
-            <div className="space-y-3 max-h-[50vh] overflow-y-auto pb-6 pr-2">
-              {trains.map(train => (
-                <div key={train.trainNumber} className="glass-darker p-4 rounded-2xl border border-white/5">
-                  <div className="flex justify-between items-start mb-3">
-                    <div>
-                      <span className="text-[10px] font-black uppercase text-slate-400 bg-white/5 px-2 py-1 rounded-md">{train.trainNumber}</span>
-                      <h4 className="font-bold text-white text-md mt-2">{train.trainName}</h4>
-                      <p className="text-xs text-slate-400 mt-1">{train.from} → {train.to}</p>
-                    </div>
-                    <Train size={20} className="text-slate-600" />
-                  </div>
-                  <button 
-                    onClick={() => handleSelectTrain(train)}
-                    className="w-full py-3 bg-brand-indigo text-white rounded-xl text-sm font-bold active:scale-95 transition-all"
-                  >
-                    Select Train
-                  </button>
-                </div>
-              ))}
+          <m.div 
+            initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="absolute inset-x-0 bottom-0 top-16 z-[100] bg-slate-900 shadow-2xl flex flex-col rounded-t-[2rem]"
+          >
+            <div className="p-4 border-b border-white/5 flex items-center space-x-3">
+               <button onClick={() => setStep(2)} className="p-2 bg-white/5 rounded-full text-slate-400 hover:text-white"><X size={18}/></button>
+               <h3 className="text-base font-bold text-white truncate flex-1">{selectedStation?.name} Trains</h3>
             </div>
-          </BottomSheet>
-        )}
-
-        {/* Step 4: Destination Sheet */}
-        {step === 4 && (
-          <BottomSheet onBack={() => setStep(3)}>
-            <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-4">Select Destination Stop</h3>
-            <div className="space-y-2 max-h-[50vh] overflow-y-auto pb-6 pr-2">
-              {selectedTrain?.stops.map((stop, idx) => (
-                <button 
-                  key={idx}
-                  onClick={() => confirmAlarm(stop)}
-                  className="w-full text-left glass-darker p-4 rounded-2xl border border-white/5 flex items-center justify-between hover:bg-white/5 active:scale-95 transition-all group"
-                >
-                  <div className="flex items-center space-x-3">
-                    <div className="w-8 h-8 rounded-full bg-black/40 flex items-center justify-center text-slate-500 group-hover:text-brand-indigo">
-                      <MapPin size={14} />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-200 text-sm">{stop.station}</h4>
-                      <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mt-1">Arrival: {stop.arrival}</p>
-                    </div>
-                  </div>
-                  <div className="text-[10px] px-3 py-1.5 rounded-full bg-brand-indigo/10 text-brand-indigo font-black flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Bell size={12} />
-                    <span>ALARM</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </BottomSheet>
-        )}
-
-        {/* Step 5: Tracking Sheet */}
-        {step === 5 && !alarmTriggered && (
-          <BottomSheet>
-             <div className="flex justify-between items-center mb-6">
-                <div>
-                  <h3 className="text-[10px] font-black text-brand-indigo uppercase tracking-[0.2em] mb-1">Mission Active</h3>
-                  <h2 className="text-xl font-black text-white leading-tight">{destination?.name}</h2>
-                </div>
-                <div className="w-12 h-12 rounded-full border border-green-500/30 bg-green-500/10 flex items-center justify-center">
-                  <div className="w-3 h-3 rounded-full bg-green-500 animate-pulse" />
-                </div>
-             </div>
-             
-             <div className="bg-black/40 border border-white/5 rounded-3xl p-6 relative overflow-hidden">
-               <div className="absolute top-0 left-0 w-full h-1 bg-white/5">
-                 <m.div 
-                   className="h-full bg-brand-indigo" 
-                   initial={{ width: '0%' }}
-                   animate={{ width: distanceRemaining ? `${Math.min(100, Math.max(0, 100 - (distanceRemaining / 100)))}%` : '0%' }}
+            
+            <div className="p-4">
+               <div className="relative">
+                 <Search size={16} className="absolute left-4 top-3.5 text-slate-500" />
+                 <input 
+                   type="text" 
+                   placeholder="Search trains by name or number..." 
+                   className="w-full bg-slate-800 border border-slate-700 rounded-xl py-3 pl-10 pr-4 text-sm text-white focus:outline-none focus:border-blue-500"
+                   value={searchTrainQuery}
+                   onChange={(e) => setSearchTrainQuery(e.target.value)}
                  />
                </div>
-               
-               <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-1">Distance Remaining</p>
-               <div className="flex items-end space-x-2">
-                 <span className="text-5xl font-light text-white tracking-tighter tabular-nums">
-                   {distanceRemaining ? distanceRemaining.toFixed(1) : '--'}
-                 </span>
-                 <span className="text-lg font-black text-brand-indigo mb-1.5">KM</span>
-               </div>
-               <p className="text-xs text-slate-400 mt-4 leading-relaxed">
-                 App will trigger a loud alarm and vibrate when you are within <strong className="text-white">2.0 km</strong> of {destination?.name}. Safe to lock screen.
-               </p>
-             </div>
+            </div>
+
+            <div className="flex-1 overflow-y-auto px-4 pb-12 space-y-3 custom-scrollbar">
+              {filteredTrains.length === 0 ? (
+                <div className="py-12 text-center text-slate-500 text-sm">
+                  <Train size={32} className="mx-auto mb-3 opacity-30" />
+                  No trains available at this station right now.
+                </div>
+              ) : (
+                filteredTrains.map(train => (
+                  <div key={train.trainNumber} className="bg-slate-800 p-4 rounded-2xl flex flex-col">
+                    <div className="flex justify-between items-start mb-4">
+                      <div>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <span className="text-xs font-black text-slate-800 bg-slate-300 px-2 py-0.5 rounded uppercase">{train.trainNumber}</span>
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Departs {train.stops[0].departure}</span>
+                        </div>
+                        <h4 className="font-bold text-white text-lg">{train.trainName}</h4>
+                        <p className="text-xs text-slate-400 font-medium">To {train.to}</p>
+                      </div>
+                      <div className="w-10 h-10 bg-black/30 rounded-full flex items-center justify-center text-slate-500">
+                        <Train size={18} />
+                      </div>
+                    </div>
+                    <button 
+                      onClick={() => handleSelectTrain(train)}
+                      className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl text-sm font-bold active:scale-95 transition-all"
+                    >
+                      Set Alarm
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </m.div>
+        )}
+
+        {/* Step 4: Set Alarm Bottom Sheet */}
+        {step === 4 && (
+          <BottomSheet onBack={() => { setStep(3); setDataError(''); }}>
+            <div className="mb-4 text-center">
+              <h3 className="text-lg font-black text-white">{selectedTrain?.trainName}</h3>
+              <p className="text-xs text-slate-400">{selectedTrain?.trainNumber}</p>
+            </div>
+            
+            {dataError && (
+              <div className="bg-red-500/10 border border-red-500/30 text-red-400 text-xs p-3 rounded-xl mb-4 text-center font-bold">
+                {dataError}
+              </div>
+            )}
+
+            <div className="space-y-2 max-h-[40vh] overflow-y-auto pb-4 custom-scrollbar">
+              {selectedTrain?.stops.map((stop, idx) => {
+                const isSelected = selectedDestStop?.station === stop.station;
+                return (
+                  <button 
+                    key={idx}
+                    onClick={() => { setSelectedDestStop(stop); setDataError(''); }}
+                    className={`w-full text-left p-4 rounded-xl border flex items-center justify-between transition-all ${
+                      isSelected 
+                        ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-900/40' 
+                        : 'bg-slate-800 border-transparent hover:bg-slate-700/80'
+                    }`}
+                  >
+                    <div>
+                      <h4 className={`font-bold text-sm ${isSelected ? 'text-white' : 'text-slate-200'}`}>{stop.station}</h4>
+                      <p className={`text-[10px] font-bold uppercase tracking-widest mt-1 ${isSelected ? 'text-blue-200' : 'text-slate-500'}`}>Arrival: {stop.arrival}</p>
+                    </div>
+                    {isSelected && <div className="w-6 h-6 rounded-full bg-white text-blue-600 flex items-center justify-center"><Check size={14} strokeWidth={3}/></div>}
+                  </button>
+                )
+              })}
+            </div>
+            
+            <button 
+              onClick={confirmAlarm}
+              className={`w-full py-4 mt-2 rounded-xl text-sm font-black uppercase tracking-widest active:scale-95 transition-all ${
+                selectedDestStop ? 'bg-blue-600 text-white shadow-xl shadow-blue-900/30' : 'bg-slate-800 text-slate-500 cursor-not-allowed'
+              }`}
+            >
+              Confirm Alarm
+            </button>
           </BottomSheet>
         )}
 
-        {/* Fullscreen Alarm Alert */}
+        {/* Step 5: Tracking Info Card */}
+        {step === 5 && !alarmTriggered && (
+          <m.div 
+            initial={{ y: '100%', opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="absolute bottom-6 left-4 right-4 z-[100] bg-slate-800 border border-slate-700 rounded-[2rem] p-5 shadow-2xl backdrop-blur-2xl"
+          >
+             <div className="flex justify-between items-start mb-4">
+                <div>
+                  <h3 className="text-xs font-black text-slate-400 mb-1">{destination?.trainName} ({destination?.trainNumber})</h3>
+                  <h2 className="text-xl font-bold text-white">{destination?.name}</h2>
+                </div>
+                <button onClick={handleCancelMission} className="p-2 rounded-full bg-slate-700 text-slate-400 hover:text-white transition-colors">
+                  <X size={16} />
+                </button>
+             </div>
+             
+             <div className="bg-slate-900 rounded-2xl p-4 mb-4 relative overflow-hidden">
+               <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Distance Remaining</p>
+               <div className="flex items-end space-x-2">
+                 <span className="text-4xl font-light text-white tracking-tight tabular-nums">
+                   {distanceRemaining ? distanceRemaining.toFixed(1) : '--'}
+                 </span>
+                 <span className="text-sm font-black text-blue-500 mb-1.5">km</span>
+               </div>
+               
+               {/* Progress Bar from origin to destination */}
+               <div className="mt-4 pt-4 border-t border-white/5">
+                 <div className="flex justify-between text-[10px] text-slate-500 font-bold uppercase mb-1">
+                   <span>Origin</span>
+                   <span>Dest</span>
+                 </div>
+                 <div className="h-1.5 bg-slate-800 rounded-full overflow-hidden">
+                   <div 
+                     className="h-full bg-blue-500 transition-all duration-1000 ease-out"
+                     style={{ width: `${progressPercent}%` }}
+                   />
+                 </div>
+               </div>
+             </div>
+          </m.div>
+        )}
+
+        {/* Fullscreen Alarm Alert Overlay */}
         {alarmTriggered && (
           <m.div 
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
             className="absolute inset-0 z-[1000] bg-red-600 flex flex-col items-center justify-center p-6 text-center"
           >
-            <m.div animate={{ rotate: [0, -10, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 0.5 }}>
-              <Bell size={100} className="text-white drop-shadow-2xl mb-8" />
+            <m.div animate={{ scale: [1, 1.2, 1], opacity: [0.8, 1, 0.8] }} transition={{ repeat: Infinity, duration: 1.5 }}>
+              <Bell size={80} className="text-white drop-shadow-2xl mb-6" />
             </m.div>
-            <h1 className="text-6xl font-black text-white uppercase tracking-tighter mb-4 drop-shadow-xl">Wake Up!</h1>
-            <p className="text-2xl font-bold text-white/90 mb-12">
-              You are approaching {destination?.name}
+            
+            <m.h1 
+              animate={{ opacity: [1, 0.4, 1] }} 
+              transition={{ repeat: Infinity, duration: 1 }}
+              className="text-5xl font-black text-white uppercase tracking-tighter mb-4 drop-shadow-xl leading-tight"
+            >
+              Wake Up!<br/>Your stop is<br/>2km away!
+            </m.h1>
+            
+            <p className="text-xl font-bold text-red-200 mb-16">
+              {destination?.name}
             </p>
+            
             <button 
               onClick={handleDismissAlarm}
-              className="px-12 py-5 bg-white text-red-600 rounded-full text-xl font-black shadow-2xl active:scale-95 transition-all w-full max-w-sm"
+              className="px-10 py-5 bg-white text-red-600 rounded-2xl text-xl font-black shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] active:scale-95 transition-all w-full max-w-xs"
             >
-              STOP ALARM
+              Dismiss Alarm
             </button>
           </m.div>
         )}
@@ -538,26 +720,18 @@ export default function TrainAlarmFlow() {
 // Reusable Bottom Sheet Component
 const BottomSheet = ({ children, onBack }) => (
   <m.div 
-    initial={{ y: '100%' }}
-    animate={{ y: 0 }}
-    exit={{ y: '100%' }}
+    initial={{ y: '100%', opacity: 0 }}
+    animate={{ y: 0, opacity: 1 }}
+    exit={{ y: '100%', opacity: 0 }}
     transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-    className="absolute bottom-0 left-0 right-0 z-[100] bg-slate-900/90 backdrop-blur-2xl border-t border-white/10 rounded-t-[2.5rem] p-6 shadow-2xl"
+    className="absolute bottom-0 left-0 right-0 z-[100] bg-slate-900 backdrop-blur-3xl border-t border-slate-800 rounded-t-[2rem] p-5 shadow-[0_-10px_40px_-5px_rgba(0,0,0,0.5)]"
   >
-    <div className="w-12 h-1.5 bg-white/20 rounded-full mx-auto mb-6" />
+    <div className="w-12 h-1.5 bg-slate-700 rounded-full mx-auto mb-5" />
     {onBack && (
-      <button onClick={onBack} className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1 mb-4 hover:text-white transition-colors">
+      <button onClick={onBack} className="text-xs font-black text-slate-400 uppercase tracking-widest flex items-center space-x-1 mb-3 hover:text-white transition-colors">
         <span>← Back</span>
       </button>
     )}
     {children}
   </m.div>
-);
-
-const MenuIcon = ({ className }) => (
-  <svg className={className} width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="3" y1="12" x2="21" y2="12"></line>
-    <line x1="3" y1="6" x2="21" y2="6"></line>
-    <line x1="3" y1="18" x2="21" y2="18"></line>
-  </svg>
 );
