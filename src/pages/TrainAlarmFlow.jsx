@@ -14,13 +14,22 @@ L.Icon.Default.mergeOptions({
   shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Helper for overriding Haversine directly
 function haversine(lat1, lon1, lat2, lon2) {
   const R = 6371;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const toRad = (deg) => deg * (Math.PI / 180);
+
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+    Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) ** 2;
+
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c; // distance in KM
 }
 
 // Custom Icons
@@ -54,53 +63,51 @@ const createStationPin = () => L.divIcon({
 
 // Web Audio API Setup
 let audioCtx = null;
-let alarmInterval = null;
+let oscillator = null;
 
-const initAudioContext = () => {
-  if (!audioCtx) {
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    audioCtx = new AudioContext();
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume();
-  }
-  return audioCtx;
-};
+function startAlarmSound() {
+  audioCtx =
+    new (window.AudioContext ||
+         window.webkitAudioContext)();
 
-// 880Hz Oscillator Alarm
-const playOscillatorAlarm = (ctx) => {
-  const osc = ctx.createOscillator();
-  osc.frequency.value = 880;
-  
-  const gainNode = ctx.createGain();
-  gainNode.gain.setValueAtTime(1, ctx.currentTime);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.5);
-  
-  osc.connect(gainNode);
-  gainNode.connect(ctx.destination);
-  
-  osc.start();
-  osc.stop(ctx.currentTime + 0.5);
-};
+  oscillator =
+    audioCtx.createOscillator();
 
-const triggerAlarmEffects = () => {
-  const ctx = initAudioContext();
-  playOscillatorAlarm(ctx);
-  if (!alarmInterval) {
-    alarmInterval = setInterval(() => playOscillatorAlarm(ctx), 1000);
-  }
-  if (navigator.vibrate) {
-    navigator.vibrate([500, 200, 500, 200, 500]);
-  }
-};
+  const gainNode =
+    audioCtx.createGain();
 
-const stopAlarmEffects = () => {
-  if (alarmInterval) {
-    clearInterval(alarmInterval);
-    alarmInterval = null;
+  oscillator.type = "square";
+
+  oscillator.frequency
+    .setValueAtTime(
+      880,
+      audioCtx.currentTime
+    );
+
+  gainNode.gain
+    .setValueAtTime(
+      1,
+      audioCtx.currentTime
+    );
+
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+
+  oscillator.start();
+}
+
+function stopAlarmSound() {
+  if (oscillator) {
+    oscillator.stop();
+    oscillator.disconnect();
+    oscillator = null;
   }
-  if (navigator.vibrate) navigator.vibrate(0);
-};
+
+  if (audioCtx) {
+    audioCtx.close();
+    audioCtx = null;
+  }
+}
 
 // Map Auto Center Hook
 const MapAutoCenter = ({ position, zoom }) => {
@@ -143,6 +150,7 @@ export default function TrainAlarmFlow() {
   const [alarmTriggered, setAlarmTriggered] = useState(false);
   const [existingAlarmPrompt, setExistingAlarmPrompt] = useState(false);
   const [dataError, setDataError] = useState('');
+  const alarmFiredRef = useRef(false);
 
   // Online offline listener
   useEffect(() => {
@@ -159,7 +167,6 @@ export default function TrainAlarmFlow() {
   // Resume state from localStorage on load
   useEffect(() => {
     const savedDest = localStorage.getItem('wakeMyStop_dest');
-    const dismissed = localStorage.getItem('wakeMyStop_dismissed');
     
     if (savedDest) {
       const parsed = JSON.parse(savedDest);
@@ -167,9 +174,10 @@ export default function TrainAlarmFlow() {
       setSelectedTrain({ trainName: parsed.trainName, trainNumber: parsed.trainNumber });
       setStep(5);
       
-      if (dismissed === 'true') {
+      const storedTriggered = localStorage.getItem('alarmTriggered') === 'true';
+      if (storedTriggered) {
         setAlarmTriggered(true);
-        // Already triggered and dismissed once, don't play sound
+        alarmFiredRef.current = true;
       }
       startLiveTracking(parsed);
     } else {
@@ -180,7 +188,7 @@ export default function TrainAlarmFlow() {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
       }
-      stopAlarmEffects();
+      stopAlarmSound();
     };
   }, []);
 
@@ -278,8 +286,6 @@ export default function TrainAlarmFlow() {
       setDataError('Cannot set alarm: stop location data unavailable');
       return;
     }
-
-    initAudioContext();
     
     // Attempt origin coordinates logic for progress bar
     let originCoord = null;
@@ -297,7 +303,14 @@ export default function TrainAlarmFlow() {
     
     setDestination(destData);
     localStorage.setItem('wakeMyStop_dest', JSON.stringify(destData));
-    localStorage.removeItem('wakeMyStop_dismissed');
+    
+    // FIX 2: Store strict numbers properly as requested
+    localStorage.setItem('destinationLat', lat.toString());
+    localStorage.setItem('destinationLng', lng.toString());
+    localStorage.setItem('alarmTriggered', 'false');
+    alarmFiredRef.current = false;
+    setAlarmTriggered(false);
+
     setStep(5);
     startLiveTracking(destData);
   };
@@ -312,56 +325,77 @@ export default function TrainAlarmFlow() {
     
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {
-        const { latitude, longitude } = pos.coords;
-        setUserLocation({ lat: latitude, lng: longitude });
+        const userLat = pos.coords.latitude;
+        const userLng = pos.coords.longitude;
+        setUserLocation({ lat: userLat, lng: userLng });
         
-        const dist = haversine(latitude, longitude, dest.lat, dest.lng);
-        setDistanceRemaining(dist);
+        // FIX 2: Read Destination Coordinates Safely
+        const destLat = parseFloat(localStorage.getItem('destinationLat'));
+        const destLng = parseFloat(localStorage.getItem('destinationLng'));
+        
+        if (isNaN(destLat) || isNaN(destLng)) {
+          console.error("Invalid destination coordinates");
+          return;
+        }
+
+        // FIX 3: USE GPS PROPERLY
+        const distance = haversine(userLat, userLng, destLat, destLng);
+        console.log("Distance to destination:", distance, "km");
+        setDistanceRemaining(distance);
         
         // Compute static progress bar percentage
         if (dest.origin) {
           const totalDist = haversine(dest.origin.lat, dest.origin.lng, dest.lat, dest.lng);
           if (totalDist > 0) {
-            const p = Math.max(0, Math.min(100, ((totalDist - dist) / totalDist) * 100));
+            const p = Math.max(0, Math.min(100, ((totalDist - distance) / totalDist) * 100));
             setProgressPercent(p);
           }
         }
         
-        // Trigger if < 2km and not already dismissed
-        const isDismissed = localStorage.getItem('wakeMyStop_dismissed') === 'true';
-        if (dist < 2.0 && !alarmTriggered && !isDismissed) {
-          setAlarmTriggered(true);
-          localStorage.setItem('wakeMyStop_triggered', 'true');
-          triggerAlarmEffects();
+        // FIX 4: ALARM MUST FIRE ONLY ONCE
+        const storedAlarmTriggered = localStorage.getItem("alarmTriggered") === "true";
+        if (distance < 2 && !storedAlarmTriggered && !alarmFiredRef.current) {
+          alarmFiredRef.current = true;
+          setAlarmTriggered(true); // show overlay
+          
+          if (navigator.vibrate) {
+            navigator.vibrate([500, 200, 500, 200, 500]);
+          }
+          startAlarmSound();
         }
       },
       (err) => {
         console.error("GPS tracking error", err);
-        // Error state: "Location access lost..."
         setLocationError(true);
       },
       { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
   };
 
+  // FIX 6: DISMISS BUTTON CLEANUP
   const handleDismissAlarm = () => {
-    stopAlarmEffects();
-    // Keep it actively tracking but shut up the alarm
-    localStorage.setItem('wakeMyStop_dismissed', 'true');
+    stopAlarmSound();
+    if (navigator.vibrate) {
+      navigator.vibrate(0);
+    }
+    alarmFiredRef.current = true;
+    localStorage.setItem("alarmTriggered", "true");
     setAlarmTriggered(false);
   };
   
   const handleCancelMission = () => {
     localStorage.removeItem('wakeMyStop_dest');
-    localStorage.removeItem('wakeMyStop_triggered');
-    localStorage.removeItem('wakeMyStop_dismissed');
+    localStorage.removeItem('destinationLat');
+    localStorage.removeItem('destinationLng');
+    localStorage.removeItem('alarmTriggered');
     if (watchIdRef.current !== null) {
       navigator.geolocation.clearWatch(watchIdRef.current);
       watchIdRef.current = null;
     }
     setDestination(null);
     setAlarmTriggered(false);
-    stopAlarmEffects();
+    stopAlarmSound();
+    if (navigator.vibrate) navigator.vibrate(0);
     setStep(2); // Go back to stations
   };
 
@@ -713,6 +747,43 @@ export default function TrainAlarmFlow() {
           </m.div>
         )}
       </AnimatePresence>
+
+      {/* FIX 7 — ADD DEBUG PANEL (DEV ONLY) */}
+      {import.meta.env.DEV && (
+        <div style={{
+          position: "fixed",
+          bottom: 80,
+          left: 8,
+          background: "rgba(0,0,0,0.8)",
+          color: "#0f0",
+          padding: "8px",
+          borderRadius: "8px",
+          fontSize: "11px",
+          zIndex: 9999,
+          fontFamily: "monospace"
+        }}>
+          <div>
+            User:
+            {userLocation?.lat?.toFixed(4)},
+            {userLocation?.lng?.toFixed(4)}
+          </div>
+          <div>
+            Dest:
+            {destination?.lat?.toFixed(4)},
+            {destination?.lng ? destination.lng.toFixed(4) : destination?.lon?.toFixed(4)}
+          </div>
+          <div>
+            Distance:
+            {distanceRemaining?.toFixed(3)} km
+          </div>
+          <div>
+            Alarm:
+            {alarmFiredRef.current
+              ? "FIRED"
+              : "waiting"}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
