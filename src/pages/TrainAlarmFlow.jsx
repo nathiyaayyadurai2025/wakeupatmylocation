@@ -359,7 +359,19 @@ export default function TrainAlarmFlow() {
                 <AlertTriangle size={48} className="text-red-500 mx-auto mb-4" />
                 <h3 className="text-xl font-bold text-white mb-2">GPS Access Denied</h3>
                 <p className="text-slate-400 text-sm mb-6">Please enable location services and allow GPS permissions to use WakeMyStop travel alarm.</p>
-                <button onClick={locateUser} className="w-full py-3 bg-red-600 text-white rounded-xl font-bold">Try Again</button>
+                <div className="space-y-3">
+                  <button onClick={locateUser} className="w-full py-3 bg-red-600 hover:bg-red-700 text-white rounded-xl font-bold transition-colors">Try Again</button>
+                  <button 
+                    onClick={() => {
+                      // Bypass with Chennai Central coordinates for demo
+                      setUserLocation({ lat: 13.0827, lng: 80.2707 });
+                      fetchStations(13.0827, 80.2707, 5000);
+                    }} 
+                    className="w-full py-3 bg-white/10 hover:bg-white/20 text-white rounded-xl font-bold transition-colors"
+                  >
+                    Start Demo Mode
+                  </button>
+                </div>
               </div>
             ) : (
               <>
