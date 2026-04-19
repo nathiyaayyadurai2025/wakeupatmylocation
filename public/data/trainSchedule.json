@@ -1,0 +1,48 @@
+[
+  {
+    "trainNumber": "12637",
+    "trainName": "Pandian Express",
+    "stops": [
+      { "name": "Chennai Egmore", "lat": 13.0785, "lng": 80.2614, "arrival": "21:40", "distanceFromOriginKm": 0 },
+      { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "22:08", "distanceFromOriginKm": 24 },
+      { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "00:05", "distanceFromOriginKm": 159 },
+      { "name": "Trichy", "lat": 10.8050, "lng": 78.6856, "arrival": "02:35", "distanceFromOriginKm": 336 },
+      { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "05:15", "distanceFromOriginKm": 493 },
+      { "name": "Kovilpatti", "lat": 9.1726, "lng": 77.8697, "arrival": "06:44", "distanceFromOriginKm": 585 },
+      { "name": "Tirunelveli", "lat": 8.7139, "lng": 77.7567, "arrival": "08:15", "distanceFromOriginKm": 650 }
+    ]
+  },
+  {
+    "trainNumber": "12635",
+    "trainName": "Vaigai Express",
+    "stops": [
+      { "name": "Chennai Egmore", "lat": 13.0785, "lng": 80.2614, "arrival": "13:50", "distanceFromOriginKm": 0 },
+      { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "14:18", "distanceFromOriginKm": 24 },
+      { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "16:00", "distanceFromOriginKm": 159 },
+      { "name": "Trichy", "lat": 10.8050, "lng": 78.6856, "arrival": "18:30", "distanceFromOriginKm": 336 },
+      { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "21:15", "distanceFromOriginKm": 493 }
+    ]
+  },
+  {
+    "trainNumber": "16101",
+    "trainName": "Boat Mail",
+    "stops": [
+      { "name": "Chennai Central", "lat": 13.0827, "lng": 80.2707, "arrival": "16:15", "distanceFromOriginKm": 0 },
+      { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "16:43", "distanceFromOriginKm": 24 },
+      { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "18:50", "distanceFromOriginKm": 159 },
+      { "name": "Cuddalore", "lat": 11.7480, "lng": 79.7714, "arrival": "19:35", "distanceFromOriginKm": 206 },
+      { "name": "Mayiladuthurai", "lat": 11.1085, "lng": 79.6534, "arrival": "21:10", "distanceFromOriginKm": 281 },
+      { "name": "Tirunelveli", "lat": 8.7139, "lng": 77.7567, "arrival": "06:15", "distanceFromOriginKm": 650 }
+    ]
+  },
+  {
+    "trainNumber": "22625",
+    "trainName": "Double Decker",
+    "stops": [
+      { "name": "Chennai Central", "lat": 13.0827, "lng": 80.2707, "arrival": "07:25", "distanceFromOriginKm": 0 },
+      { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "08:15", "distanceFromOriginKm": 30 },
+      { "name": "Chengalpattu", "lat": 12.6934, "lng": 79.9756, "arrival": "08:45", "distanceFromOriginKm": 60 },
+      { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "14:30", "distanceFromOriginKm": 490 }
+    ]
+  }
+]
