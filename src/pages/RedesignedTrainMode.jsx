@@ -2,42 +2,51 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Search, X, Settings2 } from 'lucide-react';
-import { motion as m } from 'framer-motion';
+import { MapPin, Search, X, Settings2, ChevronUp } from 'lucide-react';
+import { motion as m, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
 
-delete L.Icon.Default.prototype._getIconUrl;
-
-const customUserIcon = L.divIcon({
+// ── Custom Map Icons ──────────────────────────────────────────────────────────
+const userIcon = L.divIcon({
   className: '',
-  iconSize: [24, 24],
-  html: `<div style="width:24px;height:24px;background:#3B82F6;border-radius:50%;border:4px solid white;box-shadow:0 0 20px #3B82F6;animation:pulse 2s infinite"></div>`
+  iconSize: [22, 22],
+  iconAnchor: [11, 11],
+  html: `<div style="position:relative;width:22px;height:22px">
+    <div style="position:absolute;inset:0;background:rgba(59,130,246,0.3);border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite"></div>
+    <div style="position:absolute;inset:3px;background:#3B82F6;border-radius:50%;border:2.5px solid white;box-shadow:0 0 12px rgba(59,130,246,0.6)"></div>
+  </div>`
 });
 
 const stationIcon = L.divIcon({
   className: '',
-  iconSize: [16, 16],
-  html: `<div style="width:16px;height:16px;background:#10B981;border-radius:50%;border:2px solid white;box-shadow:0 0 10px rgba(0,0,0,0.5)"></div>`
+  iconSize: [14, 14],
+  iconAnchor: [7, 7],
+  html: `<div style="width:14px;height:14px;background:#10B981;border-radius:50%;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`
 });
 
-function MapFitter({ center, stations }) {
+function MapAutoFit({ userLoc, stations }) {
   const map = useMap();
   useEffect(() => {
-    if (center) map.setView([center.lat, center.lng], 13);
-  }, [center, map]);
+    if (!userLoc) return;
+    if (stations.length > 0) {
+      const pts = [[userLoc.lat, userLoc.lng], ...stations.map(s => [s.lat, s.lng])];
+      map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 14 });
+    } else {
+      map.setView([userLoc.lat, userLoc.lng], 13);
+    }
+  }, [userLoc, stations, map]);
   return null;
 }
 
 function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371;
-  const toRad = (deg) => deg * (Math.PI / 180);
-  const a = Math.sin(toRad(lat2 - lat1)/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(toRad(lon2 - lon1)/2)**2;
-  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+  const R = 6371, t = d => d * Math.PI / 180;
+  const a = Math.sin(t(lat2 - lat1) / 2) ** 2 + Math.cos(t(lat1)) * Math.cos(t(lat2)) * Math.sin(t(lon2 - lon1) / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
 }
 
 export default function RedesignedTrainMode() {
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(true);
+  const [phase, setPhase] = useState('loading'); // loading | error | ready
   const [errorMsg, setErrorMsg] = useState('');
   const [userLoc, setUserLoc] = useState(null);
   const [stations, setStations] = useState([]);
@@ -45,199 +54,229 @@ export default function RedesignedTrainMode() {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setErrorMsg("Location access lost. Please enable GPS.");
-      setLoading(false);
+      setErrorMsg('Geolocation not supported on this device.');
+      setPhase('error');
       return;
     }
-    
-    const timeoutId = setTimeout(() => {
-      // In case geolocation gets stuck waiting
-      if(loading) {
-        setErrorMsg("Location request timed out. Please check permissions.");
-        setLoading(false);
-      }
-    }, 10000);
-
     navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        clearTimeout(timeoutId);
-        const lat = pos.coords.latitude;
-        const lng = pos.coords.longitude;
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
         setUserLoc({ lat, lng });
         fetchStations(lat, lng, 5000);
       },
-      (err) => {
-        clearTimeout(timeoutId);
-        setErrorMsg("Location access denied. Please open settings and allow.");
-        setLoading(false);
+      err => {
+        setErrorMsg('Location access denied. Please enable GPS in settings.');
+        setPhase('error');
       },
-      { enableHighAccuracy: true, timeout: 8000 }
+      { enableHighAccuracy: true, timeout: 10000 }
     );
-    
-    return () => clearTimeout(timeoutId);
   }, []);
 
-  const fetchStations = async (lat, lon, radius) => {
+  async function fetchStations(lat, lng, radius) {
     try {
-      const url = `https://overpass-api.de/api/interpreter?data=[out:json];node["railway"="station"](around:${radius},${lat},${lon});out;`;
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (data.elements?.length > 0) {
+      const q = `[out:json];node["railway"="station"](around:${radius},${lat},${lng});out;`;
+      const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
+      const data = await res.json();
+      if (data.elements?.length) {
         const parsed = data.elements.map(el => ({
           id: el.id,
-          name: el.tags.name || 'Unnamed Station',
-          lat: el.lat,
-          lng: el.lon,
-          distance: haversine(lat, lon, el.lat, el.lon)
+          name: el.tags?.name || 'Unnamed Station',
+          lat: el.lat, lng: el.lon,
+          distance: haversine(lat, lng, el.lat, el.lon)
         })).sort((a, b) => a.distance - b.distance);
         setStations(parsed);
-      } else if (radius === 5000) {
-        fetchStations(lat, lon, 10000); 
+        setPhase('ready');
+      } else if (radius < 10000) {
+        fetchStations(lat, lng, 10000);
       } else {
-        setErrorMsg("No stations found nearby");
+        setStations([]);
+        setPhase('ready');
       }
     } catch {
-      setErrorMsg("Network error finding stations");
-    } finally {
-      setLoading(false);
+      setStations([]);
+      setPhase('ready');
     }
-  };
-
-  const selectStation = (st) => {
-    localStorage.setItem("boardingStation", JSON.stringify(st));
-    navigate('/trains');
-  };
-
-  if (errorMsg) {
-    return (
-      <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center p-6 text-center">
-        <div className="bg-[#1C2537] p-8 rounded-2xl border border-white/5 shadow-2xl max-w-sm w-full">
-          <div className="w-16 h-16 bg-red-500/10 rounded-full flex items-center justify-center mx-auto mb-4 text-red-500">
-            <MapPin size={32} />
-          </div>
-          <h2 className="text-white font-bold text-xl mb-2">Location Denied</h2>
-          <p className="text-[#9CA3AF] text-sm mb-6 leading-relaxed">{errorMsg}</p>
-          <button className="w-full bg-[#3B82F6] hover:bg-blue-500 active:scale-95 text-white py-3 rounded-xl font-bold flex items-center justify-center transition-all">
-            <Settings2 size={18} className="mr-2" /> Open Settings
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center overflow-hidden">
-        <div className="relative w-40 h-40 flex items-center justify-center mb-6">
-          {[1, 2, 3].map(i => (
-            <m.div
-              key={i}
-              initial={{ scale: 0.2, opacity: 0.8 }}
-              animate={{ scale: 2, opacity: 0 }}
-              transition={{ duration: 2, repeat: Infinity, delay: i * 0.6 }}
-              className="absolute inset-0 rounded-full bg-[#3B82F6]/30 border border-[#3B82F6]/50"
-            />
-          ))}
-          <div className="w-10 h-10 bg-[#3B82F6] rounded-full shadow-[0_0_20px_#3B82F6] z-10" />
-        </div>
-        <h2 className="text-[18px] font-bold text-white tracking-tight">Finding your location</h2>
-        <p className="text-[#9CA3AF] text-sm mt-1">Please allow location access</p>
-        <div className="flex space-x-1 mt-4">
-          {[0, 1, 2].map(i => (
-            <m.div key={i} animate={{ opacity: [0.3, 1, 0.3] }} transition={{ repeat: Infinity, duration: 1.5, delay: i * 0.2 }} className="w-1.5 h-1.5 bg-[#3B82F6] rounded-full" />
-          ))}
-        </div>
-      </div>
-    );
   }
 
   const filtered = stations.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
 
+  // ── LOADING SCREEN ────────────────────────────────────────────────────────
+  if (phase === 'loading') {
+    return (
+      <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <div className="relative w-44 h-44 flex items-center justify-center mb-8">
+          {[0, 1, 2].map(i => (
+            <m.div
+              key={i}
+              className="absolute rounded-full border border-[#3B82F6]/40"
+              style={{ inset: i * -18 - 8 }}
+              initial={{ scale: 0.5, opacity: 0.8 }}
+              animate={{ scale: 1.6, opacity: 0 }}
+              transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.7, ease: 'easeOut' }}
+            />
+          ))}
+          <div className="w-16 h-16 bg-[#3B82F6] rounded-full shadow-[0_0_40px_rgba(59,130,246,0.5)] flex items-center justify-center z-10">
+            <MapPin size={28} className="text-white" />
+          </div>
+        </div>
+        <h2 className="text-white text-[18px] font-bold tracking-tight">Finding your location...</h2>
+        <p className="text-[#9CA3AF] text-sm mt-2 font-medium">Please allow location access</p>
+        <div className="flex gap-1.5 mt-5">
+          {[0, 1, 2].map(i => (
+            <m.div
+              key={i} className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]"
+              animate={{ opacity: [0.3, 1, 0.3] }}
+              transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22 }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ── ERROR SCREEN ──────────────────────────────────────────────────────────
+  if (phase === 'error') {
+    return (
+      <div className="min-h-screen bg-[#0A0F1E] flex items-center justify-center p-6" style={{ fontFamily: "'Inter', sans-serif" }}>
+        <m.div
+          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+          className="bg-[#1C2537] rounded-2xl p-8 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.4)] max-w-sm w-full text-center"
+        >
+          <div className="w-16 h-16 bg-[#EF4444]/10 rounded-full flex items-center justify-center mx-auto mb-5 border border-[#EF4444]/20">
+            <MapPin size={30} className="text-[#EF4444]" />
+          </div>
+          <h2 className="text-[#F9FAFB] font-bold text-xl mb-2 tracking-tight">Location Denied</h2>
+          <p className="text-[#9CA3AF] text-sm leading-relaxed mb-7">{errorMsg}</p>
+          <button className="w-full h-12 bg-[#3B82F6] hover:bg-blue-400 active:scale-95 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">
+            <Settings2 size={18} /> Open Settings
+          </button>
+        </m.div>
+      </div>
+    );
+  }
+
+  // ── MAIN STATION LIST ─────────────────────────────────────────────────────
   return (
-    <div className="h-screen flex flex-col bg-[#0A0F1E] font-sans">
-      {/* 45% Map */}
-      <div className="h-[45%] w-full relative z-0">
+    <div className="h-screen flex flex-col bg-[#0A0F1E] overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
+      {/* Map — 45% */}
+      <div className="flex-shrink-0" style={{ height: '45%' }}>
         {userLoc && (
-          <MapContainer center={[userLoc.lat, userLoc.lng]} zoom={13} zoomControl={false} className="w-full h-full">
-            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" className="map-tiles-dark" />
-            <MapFitter center={userLoc} stations={stations} />
-            <Marker position={[userLoc.lat, userLoc.lng]} icon={customUserIcon} />
-            {stations.map(st => (
-              <Marker key={st.id} position={[st.lat, st.lng]} icon={stationIcon}>
-                <Popup className="custom-popup">{st.name}</Popup>
+          <MapContainer
+            center={[userLoc.lat, userLoc.lng]} zoom={13} zoomControl={false}
+            className="w-full h-full"
+            style={{ background: '#0d1117' }}
+          >
+            <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+            <MapAutoFit userLoc={userLoc} stations={stations} />
+            <Marker position={[userLoc.lat, userLoc.lng]} icon={userIcon}>
+              <Popup>Your Location</Popup>
+            </Marker>
+            {stations.map(s => (
+              <Marker key={s.id} position={[s.lat, s.lng]} icon={stationIcon}>
+                <Popup>{s.name}</Popup>
               </Marker>
             ))}
           </MapContainer>
         )}
-        <div className="absolute inset-x-0 bottom-0 h-10 bg-gradient-to-t from-[#111827] to-transparent z-[400]" />
+        {/* gradient fade */}
+        <div className="absolute" style={{ bottom: '55%', left: 0, right: 0, height: 48, background: 'linear-gradient(to top, #111827, transparent)', zIndex: 400 }} />
       </div>
 
-      {/* 55% Bottom Sheet style view */}
-      <div className="h-[55%] bg-[#111827] rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.6)] z-[500] -mt-4 relative flex flex-col">
+      {/* Bottom Sheet — 55% */}
+      <m.div
+        initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', damping: 22, stiffness: 260 }}
+        className="flex flex-col bg-[#111827] rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.6)] z-10 overflow-hidden"
+        style={{ flex: 1 }}
+      >
         {/* Drag handle */}
-        <div className="absolute top-0 inset-x-0 flex justify-center py-3">
-          <div className="w-10 h-1.5 bg-[#4B5563] rounded-full" />
+        <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
+          <div className="w-10 h-1 bg-[#374151] rounded-full" />
         </div>
 
-        <div className="px-6 pt-8 pb-4 flex-shrink-0">
-          <div className="flex items-center space-x-3 mb-4">
-            <h3 className="text-white font-bold text-xl tracking-tight">Nearby Stations</h3>
-            <span className="bg-[#1C2537] text-[#9CA3AF] text-xs font-bold px-2 py-1 rounded-full border border-white/5">
-              {stations.length} found
-            </span>
+        {/* Header */}
+        <div className="px-5 pb-4 flex-shrink-0">
+          <div className="flex items-center gap-3 mb-4">
+            <h3 className="text-[#F9FAFB] font-bold text-xl tracking-tight">Nearby Stations</h3>
+            <div className="bg-[#1C2537] border border-white/5 px-2.5 py-1 rounded-full">
+              <span className="text-[#9CA3AF] text-xs font-bold">{stations.length} found</span>
+            </div>
           </div>
 
+          {/* Search */}
           <div className="relative">
-            <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-[#9CA3AF]" />
-            <input 
-              type="text" 
-              placeholder="Search stations..." 
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-[#1C2537] text-white pl-10 pr-10 h-11 rounded-xl text-sm border border-white/5 outline-none focus:border-[#3B82F6]/50 focus:shadow-[0_0_20px_rgba(59,130,246,0.1)] transition-all"
+            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+            <input
+              value={search} onChange={e => setSearch(e.target.value)}
+              placeholder="Search stations..."
+              className="w-full h-11 bg-[#1C2537] border text-[#F9FAFB] pl-10 pr-10 rounded-xl text-sm outline-none transition-all"
+              style={{ borderColor: search ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)' }}
             />
-            {search && (
-              <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9CA3AF] hover:text-white">
-                <X size={16} />
-              </button>
-            )}
+            <AnimatePresence>
+              {search && (
+                <m.button
+                  initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }}
+                  onClick={() => setSearch('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-[#374151] rounded-full flex items-center justify-center"
+                >
+                  <X size={12} className="text-[#9CA3AF]" />
+                </m.button>
+              )}
+            </AnimatePresence>
           </div>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 pb-6 space-y-3" style={{ scrollbarWidth: 'none' }}>
-          <m.div
-            initial="hidden" animate="visible"
-            variants={{ visible: { transition: { staggerChildren: 0.05 } } }}
-            className="space-y-3"
-          >
-            {filtered.map(st => {
-              const bdgColor = st.distance < 1 ? 'bg-green-500/20 text-green-400' : st.distance < 3 ? 'bg-blue-500/20 text-blue-400' : 'bg-slate-700 text-slate-300';
-              return (
-                <m.div 
-                  key={st.id}
-                  variants={{ hidden: { y: 10, opacity: 0 }, visible: { y: 0, opacity: 1 } }}
-                  className="bg-[#1C2537] border border-white/5 p-4 rounded-2xl flex items-center shadow-sm"
-                >
-                  <div className={`px-2 py-1 rounded-md text-[10px] font-black mr-4 uppercase tracking-wider whitespace-nowrap w-16 text-center ${bdgColor}`}>
-                    {st.distance.toFixed(1)} km
-                  </div>
-                  <div className="flex-1 min-w-0 pr-2">
-                    <h4 className="text-[#F9FAFB] font-bold text-base truncate">{st.name}</h4>
-                    <p className="text-[#4B5563] text-xs font-medium uppercase tracking-wide mt-0.5">Railway Station</p>
-                  </div>
-                  <button 
-                    onClick={() => selectStation(st)}
-                    className="bg-[#3B82F6] hover:bg-blue-500 active:scale-95 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-transform whitespace-nowrap"
+        {/* Station List */}
+        <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ scrollbarWidth: 'none' }}>
+          {filtered.length === 0 ? (
+            <div className="text-center py-12 text-[#4B5563]">
+              <MapPin size={36} className="mx-auto mb-3 opacity-30" />
+              <p className="font-medium">No stations found nearby</p>
+            </div>
+          ) : (
+            <m.div className="space-y-3" initial="hidden" animate="visible"
+              variants={{ visible: { transition: { staggerChildren: 0.06 } } }}>
+              {filtered.map((st, i) => {
+                const badgeColor = st.distance < 1
+                  ? { bg: 'rgba(16,185,129,0.12)', text: '#10B981', border: 'rgba(16,185,129,0.2)' }
+                  : st.distance < 3
+                  ? { bg: 'rgba(59,130,246,0.12)', text: '#3B82F6', border: 'rgba(59,130,246,0.2)' }
+                  : { bg: 'rgba(75,85,99,0.2)', text: '#9CA3AF', border: 'rgba(75,85,99,0.3)' };
+
+                return (
+                  <m.div
+                    key={st.id}
+                    variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
+                    className="bg-[#1C2537] border rounded-2xl p-4 flex items-center gap-3 shadow-[0_4px_24px_rgba(0,0,0,0.3)]"
+                    style={{ borderColor: 'rgba(255,255,255,0.06)' }}
                   >
-                    Select
-                  </button>
-                </m.div>
-              );
-            })}
-          </m.div>
+                    {/* Distance badge */}
+                    <div className="flex-shrink-0 px-2.5 py-1.5 rounded-lg border text-center min-w-[52px]"
+                      style={{ background: badgeColor.bg, borderColor: badgeColor.border }}>
+                      <div className="text-xs font-black" style={{ color: badgeColor.text }}>{st.distance.toFixed(1)}</div>
+                      <div className="text-[9px] font-bold uppercase tracking-wide" style={{ color: badgeColor.text }}>km</div>
+                    </div>
+
+                    {/* Name */}
+                    <div className="flex-1 min-w-0">
+                      <h4 className="text-[#F9FAFB] font-bold text-[15px] truncate">{st.name}</h4>
+                      <p className="text-[#4B5563] text-[10px] font-bold uppercase tracking-wider mt-0.5">Railway Station</p>
+                    </div>
+
+                    {/* Select button */}
+                    <m.button
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => { localStorage.setItem('boardingStation', JSON.stringify(st)); navigate('/trains'); }}
+                      className="flex-shrink-0 bg-[#3B82F6] hover:bg-blue-400 text-white text-sm font-semibold px-3.5 py-2 rounded-xl transition-colors shadow-[0_0_16px_rgba(59,130,246,0.2)]"
+                    >
+                      Select
+                    </m.button>
+                  </m.div>
+                );
+              })}
+            </m.div>
+          )}
         </div>
-      </div>
+      </m.div>
     </div>
   );
 }
