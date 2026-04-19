@@ -14,6 +14,42 @@ import { MapContainer, TileLayer, Marker, Popup, useMap, useMapEvents, Polyline,
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
+// ─── Web Audio Alarm ────────────────────────────────────────────────────────
+let audioCtx = null;
+let oscillator = null;
+
+function startAlarmSound() {
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  oscillator = audioCtx.createOscillator();
+  const gainNode = audioCtx.createGain();
+  oscillator.type = "square";
+  oscillator.frequency.setValueAtTime(880, audioCtx.currentTime);
+  gainNode.gain.setValueAtTime(1, audioCtx.currentTime);
+  oscillator.connect(gainNode);
+  gainNode.connect(audioCtx.destination);
+  oscillator.start();
+}
+
+function stopAlarmSound() {
+  if (oscillator) { oscillator.stop(); oscillator.disconnect(); oscillator = null; }
+  if (audioCtx) { audioCtx.close(); audioCtx = null; }
+}
+
+// ─── Distance Calculation ───────────────────────────────────────────────────
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const toRad = (deg) => deg * (Math.PI / 180);
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) *
+    Math.cos(toRad(lat2)) *
+    Math.sin(dLon / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
 // ─── Fix for leaflet default markers ───────────────────────────────────────
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -438,15 +474,6 @@ const TrackingPage = () => {
     const finalETA = effectiveSpeed > 0 ? Math.round(remKm / effectiveSpeed * 60) : 0;
     setEstimatedTime(finalETA);
 
-    // ── Alarm trigger ──
-    const distToFinal = CALCULATE_DISTANCE(loc.lat, loc.lng, destStation.lat, destStation.lng ?? destStation.lon);
-    if (distToFinal <= settings.distanceThreshold) {
-      setIsAlarmActive(true);
-      setActiveStop(destinationStop);
-      navigate('/alarm');
-    }
-    lastDistanceRef.current = distToFinal;
-
     // API response time tracking
     apiResponseTimeRef.current = Math.round(performance.now() - apiStart);
 
@@ -474,6 +501,45 @@ const TrackingPage = () => {
   useEffect(() => {
     runTrackingEngine();
   }, [location, lastRefresh, runTrackingEngine]);
+
+  // ── Standalone Alarm Tracking engine ──
+  const [showAlarmOverlay, setShowAlarmOverlay] = useState(false);
+  const alarmFiredRef = useRef(false);
+  const [debugDistance, setDebugDistance] = useState(null);
+
+  useEffect(() => {
+    const destLat = parseFloat(localStorage.getItem("destinationLat"));
+    const destLng = parseFloat(localStorage.getItem("destinationLng"));
+
+    if (isNaN(destLat) || isNaN(destLng)) {
+      console.error("Invalid destination coordinates");
+      return;
+    }
+
+    const watchId = navigator.geolocation.watchPosition(
+      (position) => {
+        const userLat = position.coords.latitude;
+        const userLng = position.coords.longitude;
+        
+        const distance = haversine(userLat, userLng, destLat, destLng);
+        console.log("Distance to destination:", distance, "km");
+        setDebugDistance(distance);
+        
+        lastDistanceRef.current = distance; // for other UI elements
+
+        const alarmTriggered = localStorage.getItem("alarmTriggered") === "true";
+
+        if (distance < 2 && !alarmTriggered && !alarmFiredRef.current) {
+          alarmFiredRef.current = true;
+          setShowAlarmOverlay(true);
+          startAlarmSound();
+        }
+      },
+      (error) => { console.error("GPS error:", error); },
+      { enableHighAccuracy: true, maximumAge: 10000, timeout: 15000 }
+    );
+    return () => navigator.geolocation.clearWatch(watchId);
+  }, []);
 
   // ── Within routeCoords, find the index of currentStation ──
   const routeCurrentIdx = useMemo(() => {
@@ -1179,6 +1245,49 @@ const TrackingPage = () => {
           </AnimatePresence>
         </m.div>
       </div>
+      {/* ══════════ ALARM FIRING OVERLAY ══════════ */}
+      <AnimatePresence>
+        {showAlarmOverlay && (
+          <m.div
+            initial={{ opacity: 0, scale: 1.1 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[3000] bg-red-600/95 flex flex-col items-center justify-center text-center p-8 backdrop-blur-md"
+          >
+            <m.div animate={{ rotate: [0, 10, -10, 0] }} transition={{ repeat: Infinity, duration: 0.5 }}>
+              <Bell size={80} className="text-white mb-6" />
+            </m.div>
+            <h2 className="text-4xl font-black text-white mb-4 tracking-tighter uppercase">WAKE UP!</h2>
+            <p className="text-white/80 text-xl font-medium mb-8 leading-tight">
+              You are within 2km of your destination!
+            </p>
+            <button onClick={() => {
+              stopAlarmSound();
+              if (navigator.vibrate) navigator.vibrate(0);
+              alarmFiredRef.current = true;
+              localStorage.setItem("alarmTriggered", "true");
+              setShowAlarmOverlay(false);
+            }} className="bg-white text-red-600 px-12 py-6 rounded-[2rem] font-black text-xl shadow-2xl hover:scale-105 active:scale-95 transition-all">
+              DISMISS
+            </button>
+          </m.div>
+        )}
+      </AnimatePresence>
+
+      {/* FIX 8 — DEBUG PANEL (DEV ONLY) */}
+      {import.meta.env.DEV && (
+        <div style={{
+          position:"fixed", bottom:80, left:8,
+          background:"rgba(0,0,0,0.8)", color:"#0f0",
+          padding:"8px", borderRadius:"8px",
+          fontSize:"11px", zIndex:9999, fontFamily:"monospace"
+        }}>
+          <div>User: {userLocation?.lat?.toFixed(4)}, {userLocation?.lng?.toFixed(4)}</div>
+          <div>Dest: {parseFloat(localStorage.getItem('destinationLat'))?.toFixed(4)}, {parseFloat(localStorage.getItem('destinationLng'))?.toFixed(4)}</div>
+          <div>Distance: {debugDistance?.toFixed(3)} km</div>
+          <div>Alarm: {alarmFiredRef.current ? "FIRED" : "waiting"}</div>
+        </div>
+      )}
     </div>
   );
 };
