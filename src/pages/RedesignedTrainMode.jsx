@@ -9,11 +9,12 @@ import 'leaflet/dist/leaflet.css';
 // ── Custom Map Icons ──────────────────────────────────────────────────────────
 const userIcon = L.divIcon({
   className: '',
-  iconSize: [22, 22],
-  iconAnchor: [11, 11],
-  html: `<div style="position:relative;width:22px;height:22px">
-    <div style="position:absolute;inset:0;background:rgba(59,130,246,0.3);border-radius:50%;animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite"></div>
-    <div style="position:absolute;inset:3px;background:#3B82F6;border-radius:50%;border:2.5px solid white;box-shadow:0 0 12px rgba(59,130,246,0.6)"></div>
+  iconSize: [26, 26],
+  iconAnchor: [13, 13],
+  html: `<div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:0;background:rgba(59,130,246,0.25);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite"></div>
+    <div style="position:absolute;inset:-5px;background:rgba(59,130,246,0.1);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;animation-delay:0.3s"></div>
+    <div style="position:relative;width:16px;height:16px;background:#3B82F6;border-radius:50%;border:2.5px solid white;box-shadow:0 0 14px rgba(59,130,246,0.7);z-index:1"></div>
   </div>`
 });
 
@@ -202,23 +203,23 @@ export default function RedesignedTrainMode() {
             </div>
           </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+          {/* Search — Google Maps style */}
+          <div className="search-bar px-3.5">
+            <Search size={16} className="text-[#9CA3AF] flex-shrink-0 mr-2.5" />
             <input
-              value={search} onChange={e => setSearch(e.target.value)}
+              value={search}
+              onChange={e => setSearch(e.target.value)}
               placeholder="Search stations..."
-              className="w-full h-11 bg-[#1C2537] border text-[#F9FAFB] pl-10 pr-10 rounded-xl text-sm outline-none transition-all"
-              style={{ borderColor: search ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)' }}
+              className="text-sm"
             />
             <AnimatePresence>
               {search && (
                 <m.button
                   initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }}
                   onClick={() => setSearch('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 bg-[#374151] rounded-full flex items-center justify-center"
+                  className="ml-2 w-5 h-5 bg-[#374151] rounded-full flex items-center justify-center flex-shrink-0"
                 >
-                  <X size={12} className="text-[#9CA3AF]" />
+                  <X size={11} className="text-[#9CA3AF]" />
                 </m.button>
               )}
             </AnimatePresence>

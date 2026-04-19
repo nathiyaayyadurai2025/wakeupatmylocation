@@ -51,23 +51,24 @@ export default function RedesignedTrainList() {
           </div>
         </div>
 
-        {/* Search */}
-        <div className="relative mb-4">
-          <Search size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-[#9CA3AF] pointer-events-none" />
+        {/* Search — Google Maps style */}
+        <div className="search-bar px-3.5 mb-4">
+          <Search size={16} className="text-[#9CA3AF] flex-shrink-0 mr-2.5" />
           <input
-            value={search} onChange={e => setSearch(e.target.value)}
+            value={search}
+            onChange={e => setSearch(e.target.value)}
             placeholder="Search trains..."
-            className="w-full h-12 bg-[#1C2537] text-[#F9FAFB] pl-11 pr-10 rounded-xl text-sm outline-none transition-all"
-            style={{ border: `1px solid ${search ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.08)'}` }}
+            className="flex-1 text-sm bg-transparent border-none outline-none h-full"
+            style={{ color: '#F9FAFB' }}
           />
           <AnimatePresence>
             {search && (
               <m.button
                 initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }}
                 onClick={() => setSearch('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 w-6 h-6 bg-[#374151] rounded-full flex items-center justify-center"
+                className="ml-2 w-5 h-5 bg-[#374151] rounded-full flex items-center justify-center flex-shrink-0"
               >
-                <X size={12} className="text-[#9CA3AF]" />
+                <X size={11} className="text-[#9CA3AF]" />
               </m.button>
             )}
           </AnimatePresence>

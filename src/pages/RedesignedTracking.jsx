@@ -34,12 +34,12 @@ function stopAlarmSound() {
 const makeIcon = (html, size) => L.divIcon({ className: '', iconSize: size, iconAnchor: [size[0] / 2, size[1] / 2], html });
 
 const userIcon = makeIcon(`
-  <div style="position:relative;width:22px;height:22px">
-    <div style="position:absolute;inset:-6px;border-radius:50%;background:rgba(59,130,246,0.2);animation:ping 1.5s cubic-bezier(0,0,0.2,1) infinite"></div>
-    <div style="position:absolute;inset:-2px;border-radius:50%;background:rgba(59,130,246,0.15)"></div>
-    <div style="position:absolute;inset:0;background:#3B82F6;border-radius:50%;border:3px solid white;box-shadow:0 0 16px rgba(59,130,246,0.8)"></div>
+  <div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:0;background:rgba(59,130,246,0.2);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite"></div>
+    <div style="position:absolute;inset:-5px;background:rgba(59,130,246,0.1);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;animation-delay:0.35s"></div>
+    <div style="position:relative;width:15px;height:15px;background:#3B82F6;border-radius:50%;border:2.5px solid white;box-shadow:0 0 16px rgba(59,130,246,0.8);z-index:1"></div>
   </div>
-`, [22, 22]);
+`, [26, 26]);
 
 const makeStopIcon = (color, size = 9, isOutline = false) => makeIcon(`
   <div style="width:${size}px;height:${size}px;background:${isOutline ? 'transparent' : color};border-radius:50%;border:2px solid ${color};box-shadow:0 0 4px rgba(0,0,0,0.4)"></div>
