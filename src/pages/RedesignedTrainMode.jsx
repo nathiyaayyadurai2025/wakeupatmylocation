@@ -1,10 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Search, X, Settings2, ChevronUp } from 'lucide-react';
+import { MapPin, Search, X, Settings2 } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
+import { useCountry } from '../context/CountryContext';
+import { useIndonesiaRail } from '../hooks/useIndonesiaRail';
 
 // ── Custom Map Icons ──────────────────────────────────────────────────────────
 const userIcon = L.divIcon({
@@ -47,33 +49,47 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 export default function RedesignedTrainMode() {
   const navigate = useNavigate();
+  const { isIndonesia, countryFlag } = useCountry();
   const [phase, setPhase] = useState('loading'); // loading | error | ready
   const [errorMsg, setErrorMsg] = useState('');
   const [userLoc, setUserLoc] = useState(null);
   const [stations, setStations] = useState([]);
   const [search, setSearch] = useState('');
 
+  const {
+    setStationQuery,
+    stations: indonesiaStations,
+    nearestStationResult
+  } = useIndonesiaRail(userLoc);
+
   useEffect(() => {
-    if (!navigator.geolocation) {
-      setErrorMsg('Geolocation not supported on this device.');
-      setPhase('error');
+    if (search) {
+      setStationQuery(search);
+    } else {
+      setStationQuery('');
+    }
+  }, [search, setStationQuery]);
+
+  const fetchStations = useCallback(async (lat, lng, radius) => {
+    if (isIndonesia) {
+      // Indonesia Mode: use local DB stations calculated with distance to user location
+      const allIdStations = indonesiaStations.map(st => ({
+        id: st.stationCode,
+        code: st.stationCode,
+        name: st.stationName,
+        lat: st.latitude,
+        lng: st.longitude,
+        city: st.city,
+        province: st.province,
+        operator: st.operator,
+        distance: haversine(lat, lng, st.latitude, st.longitude)
+      })).sort((a, b) => a.distance - b.distance);
+
+      setStations(allIdStations);
+      setPhase('ready');
       return;
     }
-    navigator.geolocation.getCurrentPosition(
-      pos => {
-        const { latitude: lat, longitude: lng } = pos.coords;
-        setUserLoc({ lat, lng });
-        fetchStations(lat, lng, 5000);
-      },
-      err => {
-        setErrorMsg('Location access denied. Please enable GPS in settings.');
-        setPhase('error');
-      },
-      { enableHighAccuracy: true, timeout: 10000 }
-    );
-  }, []);
 
-  async function fetchStations(lat, lng, radius) {
     try {
       const q = `[out:json];node["railway"="station"](around:${radius},${lat},${lng});out;`;
       const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
@@ -97,9 +113,39 @@ export default function RedesignedTrainMode() {
       setStations([]);
       setPhase('ready');
     }
-  }
+  }, [isIndonesia, indonesiaStations]);
 
-  const filtered = stations.filter(s => s.name.toLowerCase().includes(search.toLowerCase()));
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setErrorMsg('Geolocation not supported on this device.');
+      setPhase('error');
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const { latitude: lat, longitude: lng } = pos.coords;
+        setUserLoc({ lat, lng });
+        fetchStations(lat, lng, 5000);
+      },
+      err => {
+        // Fallback for desktop/emulator without hardware GPS
+        const fallbackLat = isIndonesia ? -6.1767 : 13.0827; // Jakarta or Chennai
+        const fallbackLng = isIndonesia ? 106.8306 : 80.2707;
+        setUserLoc({ lat: fallbackLat, lng: fallbackLng });
+        fetchStations(fallbackLat, fallbackLng, 10000);
+      },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
+  }, [isIndonesia]);
+
+  const filtered = stations.filter(s => {
+    const q = search.toLowerCase();
+    const nameMatch = s.name.toLowerCase().includes(q);
+    const codeMatch = s.code ? s.code.toLowerCase().includes(q) : false;
+    const cityMatch = s.city ? s.city.toLowerCase().includes(q) : false;
+    const provMatch = s.province ? s.province.toLowerCase().includes(q) : false;
+    return nameMatch || codeMatch || cityMatch || provMatch;
+  });
 
   // ── LOADING SCREEN ────────────────────────────────────────────────────────
   if (phase === 'loading') {
@@ -121,7 +167,7 @@ export default function RedesignedTrainMode() {
           </div>
         </div>
         <h2 className="text-white text-[18px] font-bold tracking-tight">Finding your location...</h2>
-        <p className="text-[#9CA3AF] text-sm mt-2 font-medium">Please allow location access</p>
+        <p className="text-[#9CA3AF] text-sm mt-2 font-medium">Please allow location access {countryFlag}</p>
         <div className="flex gap-1.5 mt-5">
           {[0, 1, 2].map(i => (
             <m.div
@@ -148,8 +194,16 @@ export default function RedesignedTrainMode() {
           </div>
           <h2 className="text-[#F9FAFB] font-bold text-xl mb-2 tracking-tight">Location Denied</h2>
           <p className="text-[#9CA3AF] text-sm leading-relaxed mb-7">{errorMsg}</p>
-          <button className="w-full h-12 bg-[#3B82F6] hover:bg-blue-400 active:scale-95 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]">
-            <Settings2 size={18} /> Open Settings
+          <button
+            onClick={() => {
+              const defaultLat = isIndonesia ? -6.1767 : 13.0827;
+              const defaultLng = isIndonesia ? 106.8306 : 80.2707;
+              setUserLoc({ lat: defaultLat, lng: defaultLng });
+              fetchStations(defaultLat, defaultLng, 10000);
+            }}
+            className="w-full h-12 bg-[#3B82F6] hover:bg-blue-400 active:scale-95 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
+          >
+            <MapPin size={18} /> Use Default Station List
           </button>
         </m.div>
       </div>
@@ -174,7 +228,7 @@ export default function RedesignedTrainMode() {
             </Marker>
             {stations.map(s => (
               <Marker key={s.id} position={[s.lat, s.lng]} icon={stationIcon}>
-                <Popup>{s.name}</Popup>
+                <Popup>{s.name} {s.code ? `(${s.code})` : ''}</Popup>
               </Marker>
             ))}
           </MapContainer>
@@ -194,12 +248,32 @@ export default function RedesignedTrainMode() {
           <div className="w-10 h-1 bg-[#374151] rounded-full" />
         </div>
 
+        {/* Nearest Station Alert (if Indonesia active & detected) */}
+        {isIndonesia && nearestStationResult && (
+          <div className="mx-5 mb-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-red-500/10 to-blue-500/10 border border-red-500/20 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="text-sm">📍</span>
+              <div>
+                <div className="text-[10px] font-black text-red-400 uppercase tracking-wider">Nearest KAI Station</div>
+                <div className="text-xs font-bold text-white">{nearestStationResult.station.stationName} ({nearestStationResult.station.stationCode})</div>
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="text-xs font-black text-emerald-400">{nearestStationResult.distanceKm} km</div>
+              <div className="text-[9px] text-[#9CA3AF]">~{nearestStationResult.etaMinutes} min ETA</div>
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="px-5 pb-4 flex-shrink-0">
           <div className="flex items-center gap-3 mb-4">
-            <h3 className="text-[#F9FAFB] font-bold text-xl tracking-tight">Nearby Stations</h3>
+            <h3 className="text-[#F9FAFB] font-bold text-xl tracking-tight flex items-center gap-2">
+              <span>Nearby Stations</span>
+              <span className="text-base">{countryFlag}</span>
+            </h3>
             <div className="bg-[#1C2537] border border-white/5 px-2.5 py-1 rounded-full">
-              <span className="text-[#9CA3AF] text-xs font-bold">{stations.length} found</span>
+              <span className="text-[#9CA3AF] text-xs font-bold">{filtered.length} found</span>
             </div>
           </div>
 
@@ -209,7 +283,7 @@ export default function RedesignedTrainMode() {
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Search stations..."
+              placeholder={isIndonesia ? "Search station name, code, city, province..." : "Search stations..."}
               className="text-sm"
             />
             <AnimatePresence>
@@ -231,12 +305,12 @@ export default function RedesignedTrainMode() {
           {filtered.length === 0 ? (
             <div className="text-center py-12 text-[#4B5563]">
               <MapPin size={36} className="mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No stations found nearby</p>
+              <p className="font-medium">No stations found</p>
             </div>
           ) : (
             <m.div className="space-y-3" initial="hidden" animate="visible"
               variants={{ visible: { transition: { staggerChildren: 0.06 } } }}>
-              {filtered.map((st, i) => {
+              {filtered.map((st) => {
                 const badgeColor = st.distance < 1
                   ? { bg: 'rgba(16,185,129,0.12)', text: '#10B981', border: 'rgba(16,185,129,0.2)' }
                   : st.distance < 3
@@ -259,8 +333,24 @@ export default function RedesignedTrainMode() {
 
                     {/* Name */}
                     <div className="flex-1 min-w-0">
-                      <h4 className="text-[#F9FAFB] font-bold text-[15px] truncate">{st.name}</h4>
-                      <p className="text-[#4B5563] text-[10px] font-bold uppercase tracking-wider mt-0.5">Railway Station</p>
+                      <div className="flex items-center gap-2">
+                        <h4 className="text-[#F9FAFB] font-bold text-[15px] truncate">{st.name}</h4>
+                        {st.code && (
+                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                            {st.code}
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-[#4B5563] text-[10px] font-bold uppercase tracking-wider">
+                          {st.operator || 'Railway Station'}
+                        </span>
+                        {st.province && (
+                          <span className="text-[#9CA3AF] text-[10px] truncate font-medium">
+                            • {st.city}, {st.province}
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     {/* Select button */}

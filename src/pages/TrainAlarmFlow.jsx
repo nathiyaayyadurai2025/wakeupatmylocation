@@ -193,26 +193,28 @@ export default function TrainAlarmFlow() {
   }, []);
 
   // STEP 1: AUTO LOCATION ON LOAD
-  const locateUser = () => {
+  function locateUser() {
     setStep(1);
     setLocationError(false);
+    
     if (!navigator.geolocation) {
       setLocationError(true);
       return;
     }
+
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const { latitude, longitude } = pos.coords;
         setUserLocation({ lat: latitude, lng: longitude });
-        fetchStations(latitude, longitude, 5000);
+        fetchStations(latitude, longitude, 5000); // 5km radius
       },
       (err) => {
-        console.error(err);
+        console.error("GPS Error:", err);
         setLocationError(true);
       },
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
     );
-  };
+  }
 
   // STEP 2: FIND NEARBY RAILWAY STATIONS
   const fetchStations = async (lat, lon, radius) => {
@@ -256,11 +258,31 @@ export default function TrainAlarmFlow() {
     setTrains(TRAIN_DATA);
   };
 
-  // Apply search filtering on trains list
-  const filteredTrains = trains.filter(t => 
-    t.trainName.toLowerCase().includes(searchTrainQuery.toLowerCase()) || 
-    t.trainNumber.toLowerCase().includes(searchTrainQuery.toLowerCase())
-  );
+  // Apply station-strict filtering on trains list
+  const filteredTrains = trains.filter(t => {
+    // 1. Must stop at selectedStation
+    if (selectedStation && t.stops && t.stops.length > 0) {
+      const stopsAtStation = t.stops.some(stop => {
+        const stopName = (stop.station || stop.name || '').toLowerCase();
+        const selectName = (selectedStation.name || '').toLowerCase();
+        const clean = (s) => s.replace(/stasiun|station|junction|jn|\s/g, '');
+        const nameMatch = clean(stopName).includes(clean(selectName)) || clean(selectName).includes(clean(stopName));
+        
+        let distMatch = false;
+        if (stop.lat && stop.lng && selectedStation.lat && selectedStation.lng) {
+          distMatch = haversine(stop.lat, stop.lng, selectedStation.lat, selectedStation.lng) <= 2.5;
+        }
+
+        return nameMatch || distMatch;
+      });
+
+      if (!stopsAtStation) return false;
+    }
+
+    // 2. Search query match
+    return t.trainName.toLowerCase().includes(searchTrainQuery.toLowerCase()) || 
+      t.trainNumber.toLowerCase().includes(searchTrainQuery.toLowerCase());
+  });
 
   // Set selected train, open stop list (Step 4 setup)
   const handleSelectTrain = (train) => {
@@ -316,12 +338,14 @@ export default function TrainAlarmFlow() {
   };
 
   // STEP 5: LIVE GPS TRACKING
-  const startLiveTracking = (dest) => {
+  function startLiveTracking(dest) {
     if (!navigator.geolocation) return;
     
-    if (watchIdRef.current !== null) {
-      navigator.geolocation.clearWatch(watchIdRef.current);
-    }
+    setStep(5);
+    setActiveTrackingDest(dest);
+
+    // Watch position
+    if (watchIdRef.current) navigator.geolocation.clearWatch(watchIdRef.current);
     
     watchIdRef.current = navigator.geolocation.watchPosition(
       (pos) => {

@@ -10,9 +10,12 @@ const STEPS = [
   { path: '/tracking', label: 'Tracking' },
 ];
 
+import { useCountry } from '../context/CountryContext';
+
 export default function StepHeader() {
   const { pathname } = useLocation();
   const [offline, setOffline] = useState(!navigator.onLine);
+  const { country, setCountry } = useCountry();
 
   useEffect(() => {
     const on = () => setOffline(false);
@@ -45,48 +48,76 @@ export default function StepHeader() {
   return (
     <div className="fixed top-0 left-0 right-0 z-[5000] flex flex-col items-center pt-3 pointer-events-none"
       style={{ fontFamily: "'Inter', sans-serif" }}>
-      {/* Step Pill */}
-      <div
-        className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full"
-        style={{ background: 'rgba(17,24,39,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}
-      >
-        {STEPS.map((step, i) => {
-          const isActive = i === currentIdx;
-          const isDone = i < currentIdx;
-          return (
-            <React.Fragment key={step.path}>
-              <div className="flex items-center gap-1.5">
-                <m.div
-                  layout
-                  className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
-                  style={{
-                    background: isActive ? '#3B82F6' : isDone ? '#10B981' : 'transparent',
-                    border: isActive || isDone ? 'none' : '2px solid #374151',
-                    boxShadow: isActive ? '0 0 12px rgba(59,130,246,0.5)' : 'none',
-                  }}
-                >
-                  {isDone ? <Check size={11} className="text-white" /> :
-                   isActive ? <div className="w-2 h-2 bg-white rounded-full" /> : null}
-                </m.div>
-                <AnimatePresence>
-                  {isActive && (
-                    <m.span
-                      initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="text-white text-[11px] font-bold tracking-wide overflow-hidden whitespace-nowrap"
-                    >
-                      {step.label}
-                    </m.span>
-                  )}
-                </AnimatePresence>
-              </div>
-              {i < STEPS.length - 1 && (
-                <div className="w-4 h-[1.5px] rounded-full flex-shrink-0 transition-colors"
-                  style={{ background: isDone ? '#10B981' : '#374151' }} />
-              )}
-            </React.Fragment>
-          );
-        })}
+      
+      <div className="flex items-center gap-2">
+        {/* Step Pill */}
+        <div
+          className="pointer-events-auto flex items-center gap-1.5 px-4 py-2 rounded-full"
+          style={{ background: 'rgba(17,24,39,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}
+        >
+          {STEPS.map((step, i) => {
+            const isActive = i === currentIdx;
+            const isDone = i < currentIdx;
+            return (
+              <React.Fragment key={step.path}>
+                <div className="flex items-center gap-1.5">
+                  <m.div
+                    layout
+                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 transition-colors"
+                    style={{
+                      background: isActive ? '#3B82F6' : isDone ? '#10B981' : 'transparent',
+                      border: isActive || isDone ? 'none' : '2px solid #374151',
+                      boxShadow: isActive ? '0 0 12px rgba(59,130,246,0.5)' : 'none',
+                    }}
+                  >
+                    {isDone ? <Check size={11} className="text-white" /> :
+                     isActive ? <div className="w-2 h-2 bg-white rounded-full" /> : null}
+                  </m.div>
+                  <AnimatePresence>
+                    {isActive && (
+                      <m.span
+                        initial={{ width: 0, opacity: 0 }} animate={{ width: 'auto', opacity: 1 }} exit={{ width: 0, opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="text-white text-[11px] font-bold tracking-wide overflow-hidden whitespace-nowrap"
+                      >
+                        {step.label}
+                      </m.span>
+                    )}
+                  </AnimatePresence>
+                </div>
+                {i < STEPS.length - 1 && (
+                  <div className="w-4 h-[1.5px] rounded-full flex-shrink-0 transition-colors"
+                    style={{ background: isDone ? '#10B981' : '#374151' }} />
+                )}
+              </React.Fragment>
+            );
+          })}
+        </div>
+
+        {/* Country Switcher Pill */}
+        <div
+          className="pointer-events-auto flex items-center p-0.5 rounded-full"
+          style={{ background: 'rgba(17,24,39,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}
+        >
+          <button
+            onClick={() => setCountry('IN')}
+            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
+              country === 'IN' ? 'bg-[#3B82F6] text-white shadow-md' : 'text-[#9CA3AF] hover:text-white'
+            }`}
+          >
+            <span>🇮🇳</span>
+            <span className="text-[10px] uppercase">IN</span>
+          </button>
+          <button
+            onClick={() => setCountry('ID')}
+            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
+              country === 'ID' ? 'bg-[#EF4444] text-white shadow-md' : 'text-[#9CA3AF] hover:text-white'
+            }`}
+          >
+            <span>🇮🇩</span>
+            <span className="text-[10px] uppercase">ID</span>
+          </button>
+        </div>
       </div>
 
       {/* Offline banner */}

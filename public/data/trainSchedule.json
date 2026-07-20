@@ -44,5 +44,58 @@
       { "name": "Chengalpattu", "lat": 12.6934, "lng": 79.9756, "arrival": "08:45", "distanceFromOriginKm": 60 },
       { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "14:30", "distanceFromOriginKm": 490 }
     ]
+  },
+  {
+    "trainNumber": "ABA-1",
+    "trainName": "Argo Bromo Anggrek",
+    "stops": [
+      { "name": "Stasiun Gambir", "lat": -6.1767, "lng": 106.8306, "arrival": "08:20", "distanceFromOriginKm": 0 },
+      { "name": "Stasiun Surabaya Gubeng", "lat": -7.2653, "lng": 112.7521, "arrival": "16:45", "distanceFromOriginKm": 720 }
+    ]
+  },
+  {
+    "trainNumber": "AP-36",
+    "trainName": "Argo Parahyangan",
+    "stops": [
+      { "name": "Stasiun Gambir", "lat": -6.1767, "lng": 106.8306, "arrival": "06:30", "distanceFromOriginKm": 0 },
+      { "name": "Stasiun Bandung", "lat": -6.9147, "lng": 107.6025, "arrival": "09:15", "distanceFromOriginKm": 150 }
+    ]
+  },
+  {
+    "trainNumber": "LD-92",
+    "trainName": "Lodaya",
+    "stops": [
+      { "name": "Stasiun Bandung", "lat": -6.9147, "lng": 107.6025, "arrival": "07:00", "distanceFromOriginKm": 0 },
+      { "name": "Stasiun Yogyakarta / Tugu", "lat": -7.7892, "lng": 110.3635, "arrival": "14:20", "distanceFromOriginKm": 380 },
+      { "name": "Stasiun Solo Balapan", "lat": -7.5583, "lng": 110.8214, "arrival": "15:20", "distanceFromOriginKm": 440 }
+    ]
+  },
+  {
+    "trainNumber": "GJ-56",
+    "trainName": "Gajayana",
+    "stops": [
+      { "name": "Stasiun Gambir", "lat": -6.1767, "lng": 106.8306, "arrival": "18:40", "distanceFromOriginKm": 0 },
+      { "name": "Stasiun Yogyakarta / Tugu", "lat": -7.7892, "lng": 110.3635, "arrival": "01:30", "distanceFromOriginKm": 512 },
+      { "name": "Stasiun Solo Balapan", "lat": -7.5583, "lng": 110.8214, "arrival": "02:30", "distanceFromOriginKm": 572 },
+      { "name": "Stasiun Malang", "lat": -7.9772, "lng": 112.6373, "arrival": "06:50", "distanceFromOriginKm": 870 }
+    ]
+  },
+  {
+    "trainNumber": "MM-233",
+    "trainName": "Matarmaja",
+    "stops": [
+      { "name": "Stasiun Pasar Senen", "lat": -6.1856, "lng": 106.8450, "arrival": "10:30", "distanceFromOriginKm": 0 },
+      { "name": "Stasiun Solo Balapan", "lat": -7.5583, "lng": 110.8214, "arrival": "18:45", "distanceFromOriginKm": 570 },
+      { "name": "Stasiun Malang", "lat": -7.9772, "lng": 112.6373, "arrival": "23:05", "distanceFromOriginKm": 870 }
+    ]
+  },
+  {
+    "trainNumber": "SC-100",
+    "trainName": "Sancaka",
+    "stops": [
+      { "name": "Stasiun Yogyakarta / Tugu", "lat": -7.7892, "lng": 110.3635, "arrival": "06:45", "distanceFromOriginKm": 0 },
+      { "name": "Stasiun Solo Balapan", "lat": -7.5583, "lng": 110.8214, "arrival": "07:35", "distanceFromOriginKm": 60 },
+      { "name": "Stasiun Surabaya Gubeng", "lat": -7.2653, "lng": 112.7521, "arrival": "10:45", "distanceFromOriginKm": 320 }
+    ]
   }
 ]

@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, X, Bell, Check } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
+import { useCountry } from '../context/CountryContext';
+import { useIndonesiaRail } from '../hooks/useIndonesiaRail';
+import { CALCULATE_DISTANCE } from '../constants';
 
 const pageVariants = {
   initial: { opacity: 0, y: 20 },
@@ -10,24 +13,73 @@ const pageVariants = {
 
 export default function RedesignedTrainList() {
   const navigate = useNavigate();
+  const { isIndonesia, countryFlag } = useCountry();
   const [trains, setTrains] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [boardingStation, setBoardingStation] = useState(null);
   const [selectedTrain, setSelectedTrain] = useState(null);
 
+  const { getRoutesForStation, routes: allIdRoutes } = useIndonesiaRail();
+
   useEffect(() => {
     const st = localStorage.getItem('boardingStation');
     if (!st) { navigate('/train'); return; }
-    setBoardingStation(JSON.parse(st));
-    fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
-  }, [navigate]);
+    const parsedStation = JSON.parse(st);
+    setBoardingStation(parsedStation);
 
-  const filters = ['All', 'Express', 'Mail', 'Passenger'];
+    if (isIndonesia) {
+      // Indonesia mode: query local routes database for station
+      const stIdentifier = parsedStation.code || parsedStation.id || parsedStation.name;
+      const matchedRoutes = getRoutesForStation(stIdentifier);
+
+      const formatted = matchedRoutes.map(r => ({
+        trainNumber: r.trainNumber,
+        trainName: r.trainName,
+        category: r.category,
+        stops: r.stops.map(s => ({
+          name: s.stationName,
+          lat: s.latitude,
+          lng: s.longitude,
+          arrival: s.arrival,
+          distanceFromOriginKm: s.distanceFromOriginKm
+        }))
+      }));
+
+      setTrains(formatted);
+    } else {
+      fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
+    }
+  }, [navigate, isIndonesia]);
+
+  const filters = isIndonesia ? ['All', 'Antarkota', 'Commuter Line', 'Bandara'] : ['All', 'Express', 'Mail', 'Passenger'];
 
   const filtered = trains.filter(t => {
-    const matchSearch = t.trainName.toLowerCase().includes(search.toLowerCase()) || t.trainNumber.includes(search);
-    const matchFilter = filter === 'All' || t.trainName.toLowerCase().includes(filter.toLowerCase());
+    // 1. Station-Strict Filtering: must stop at or pass through boardingStation
+    if (boardingStation && t.stops && t.stops.length > 0) {
+      const stopsAtBoarding = t.stops.some(stop => {
+        const stopName = (stop.name || '').toLowerCase();
+        const boardName = (boardingStation.name || '').toLowerCase();
+        
+        // Clean prefixes for robust comparison
+        const clean = (s) => s.replace(/stasiun|station|junction|jn|\s/g, '');
+        const nameMatch = clean(stopName).includes(clean(boardName)) || clean(boardName).includes(clean(stopName));
+        
+        // Distance match fallback (< 2.5km)
+        let distMatch = false;
+        if (stop.lat && stop.lng && boardingStation.lat && boardingStation.lng) {
+          distMatch = CALCULATE_DISTANCE(stop.lat, stop.lng, boardingStation.lat, boardingStation.lng) <= 2.5;
+        }
+
+        return nameMatch || distMatch;
+      });
+
+      if (!stopsAtBoarding) return false;
+    }
+
+    // 2. Search & Category Filters
+    const matchSearch = t.trainName.toLowerCase().includes(search.toLowerCase()) || t.trainNumber.toLowerCase().includes(search.toLowerCase());
+    const matchFilter = filter === 'All' || (t.category && t.category.toLowerCase() === filter.toLowerCase()) || t.trainName.toLowerCase().includes(filter.toLowerCase());
     return matchSearch && matchFilter;
   });
 
@@ -45,7 +97,15 @@ export default function RedesignedTrainList() {
           >
             <ArrowLeft size={18} />
           </m.button>
-          <h2 className="text-[#F9FAFB] font-bold text-lg tracking-tight">{boardingStation?.name || 'Station'}</h2>
+          <div className="text-center">
+            <h2 className="text-[#F9FAFB] font-bold text-lg tracking-tight flex items-center justify-center gap-1.5">
+              <span>{boardingStation?.name || 'Station'}</span>
+              <span>{countryFlag}</span>
+            </h2>
+            {boardingStation?.code && (
+              <span className="text-[10px] text-blue-400 font-mono font-bold">{boardingStation.code} • {boardingStation.operator || 'KAI'}</span>
+            )}
+          </div>
           <div className="bg-[#1C2537] border border-white/5 px-3 py-1 rounded-full">
             <span className="text-[#9CA3AF] text-xs font-bold">{filtered.length} trains</span>
           </div>
@@ -57,7 +117,7 @@ export default function RedesignedTrainList() {
           <input
             value={search}
             onChange={e => setSearch(e.target.value)}
-            placeholder="Search trains..."
+            placeholder="Search trains by name or number..."
             className="flex-1 text-sm bg-transparent border-none outline-none h-full"
             style={{ color: '#F9FAFB' }}
           />
@@ -98,7 +158,7 @@ export default function RedesignedTrainList() {
         {filtered.length === 0 && (
           <div className="text-center py-16 text-[#4B5563]">
             <div className="text-4xl mb-3">🚆</div>
-            <p className="font-medium">No trains found at this station</p>
+            <p className="font-medium">No trains available for {boardingStation?.name || 'this station'}</p>
           </div>
         )}
 
@@ -119,7 +179,14 @@ export default function RedesignedTrainList() {
                   >
                     {t.trainNumber}
                   </span>
-                  <h3 className="text-[#F9FAFB] font-bold text-[15px] tracking-tight truncate">{t.trainName}</h3>
+                  <div>
+                    <h3 className="text-[#F9FAFB] font-bold text-[15px] tracking-tight truncate">{t.trainName}</h3>
+                    {t.category && (
+                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">
+                        {t.category}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 <div className="text-right flex-shrink-0">
                   <div className="text-[#F9FAFB] font-bold text-[15px]">{t.stops[0]?.arrival}</div>

@@ -1,0 +1,264 @@
+[
+  {
+    "id": "ABA-1",
+    "trainName": "Argo Bromo Anggrek (Gambir - Surabaya Pasarturi)",
+    "trainNumber": "ABA-1",
+    "category": "Antarkota",
+    "origin": "Stasiun Gambir",
+    "destination": "Stasiun Surabaya Pasarturi",
+    "stops": [
+      { "stationCode": "GMR", "stationName": "Stasiun Gambir", "arrival": "START", "departure": "08:20", "distanceFromOriginKm": 0, "latitude": -6.1767, "longitude": 106.8306 },
+      { "stationCode": "BKS", "stationName": "Stasiun Bekasi", "arrival": "08:48", "departure": "08:50", "distanceFromOriginKm": 22, "latitude": -6.2361, "longitude": 106.9994 },
+      { "stationCode": "CN", "stationName": "Stasiun Cirebon", "arrival": "11:00", "departure": "11:05", "distanceFromOriginKm": 219, "latitude": -6.7053, "longitude": 108.5553 },
+      { "stationCode": "TGL", "stationName": "Stasiun Tegal", "arrival": "11:55", "departure": "11:58", "distanceFromOriginKm": 294, "latitude": -6.8681, "longitude": 109.1417 },
+      { "stationCode": "PK", "stationName": "Stasiun Pekalongan", "arrival": "12:38", "departure": "12:41", "distanceFromOriginKm": 358, "latitude": -6.8894, "longitude": 109.6644 },
+      { "stationCode": "SMT", "stationName": "Stasiun Semarang Tawang", "arrival": "13:45", "departure": "13:52", "distanceFromOriginKm": 444, "latitude": -6.9644, "longitude": 110.4281 },
+      { "stationCode": "SBI", "stationName": "Stasiun Surabaya Pasarturi", "arrival": "16:45", "departure": "END", "distanceFromOriginKm": 720, "latitude": -7.2475, "longitude": 112.7308 }
+    ]
+  },
+  {
+    "id": "AP-36",
+    "trainName": "Argo Parahyangan (Gambir - Bandung)",
+    "trainNumber": "AP-36",
+    "category": "Antarkota",
+    "origin": "Stasiun Gambir",
+    "destination": "Stasiun Bandung (Hall)",
+    "stops": [
+      { "stationCode": "GMR", "stationName": "Stasiun Gambir", "arrival": "START", "departure": "06:30", "distanceFromOriginKm": 0, "latitude": -6.1767, "longitude": 106.8306 },
+      { "stationCode": "JNG", "stationName": "Stasiun Jatinegara", "arrival": "06:45", "departure": "06:47", "distanceFromOriginKm": 12, "latitude": -6.2151, "longitude": 106.8704 },
+      { "stationCode": "BKS", "stationName": "Stasiun Bekasi", "arrival": "07:00", "departure": "07:02", "distanceFromOriginKm": 27, "latitude": -6.2361, "longitude": 106.9994 },
+      { "stationCode": "KW", "stationName": "Stasiun Karawang", "arrival": "07:30", "departure": "07:32", "distanceFromOriginKm": 62, "latitude": -6.3053, "longitude": 107.3061 },
+      { "stationCode": "PWK", "stationName": "Stasiun Purwakarta", "arrival": "08:15", "departure": "08:18", "distanceFromOriginKm": 95, "latitude": -6.5542, "longitude": 107.4461 },
+      { "stationCode": "PDL", "stationName": "Stasiun Padalarang", "arrival": "09:00", "departure": "09:03", "distanceFromOriginKm": 135, "latitude": -6.8423, "longitude": 107.4801 },
+      { "stationCode": "CMI", "stationName": "Stasiun Cimahi", "arrival": "09:12", "departure": "09:14", "distanceFromOriginKm": 145, "latitude": -6.8864, "longitude": 107.5408 },
+      { "stationCode": "BD", "stationName": "Stasiun Bandung (Hall)", "arrival": "09:30", "departure": "END", "distanceFromOriginKm": 155, "latitude": -6.9147, "longitude": 107.6025 }
+    ]
+  },
+  {
+    "id": "AW-6",
+    "trainName": "Argo Wilis (Bandung - Surabaya Gubeng)",
+    "trainNumber": "AW-6",
+    "category": "Antarkota",
+    "origin": "Stasiun Bandung (Hall)",
+    "destination": "Stasiun Surabaya Gubeng",
+    "stops": [
+      { "stationCode": "BD", "stationName": "Stasiun Bandung (Hall)", "arrival": "START", "departure": "07:40", "distanceFromOriginKm": 0, "latitude": -6.9147, "longitude": 107.6025 },
+      { "stationCode": "TSM", "stationName": "Stasiun Tasikmalaya", "arrival": "10:15", "departure": "10:18", "distanceFromOriginKm": 115, "latitude": -7.3225, "longitude": 108.2238 },
+      { "stationCode": "PWT", "stationName": "Stasiun Purwokerto", "arrival": "13:00", "departure": "13:08", "distanceFromOriginKm": 258, "latitude": -7.4189, "longitude": 109.2225 },
+      { "stationCode": "KTA", "stationName": "Stasiun Kutoarjo", "arrival": "14:20", "departure": "14:25", "distanceFromOriginKm": 350, "latitude": -7.7175, "longitude": 109.9078 },
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "15:15", "departure": "15:22", "distanceFromOriginKm": 412, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "16:05", "departure": "16:10", "distanceFromOriginKm": 472, "latitude": -7.5583, "longitude": 110.8214 },
+      { "stationCode": "MN", "stationName": "Stasiun Madiun", "arrival": "17:25", "departure": "17:30", "distanceFromOriginKm": 570, "latitude": -7.6186, "longitude": 111.5242 },
+      { "stationCode": "SGU", "stationName": "Stasiun Surabaya Gubeng", "arrival": "19:55", "departure": "END", "distanceFromOriginKm": 690, "latitude": -7.2653, "longitude": 112.7521 }
+    ]
+  },
+  {
+    "id": "AL-7",
+    "trainName": "Argo Lawu (Gambir - Solo Balapan)",
+    "trainNumber": "AL-7",
+    "category": "Antarkota",
+    "origin": "Stasiun Gambir",
+    "destination": "Stasiun Solo Balapan",
+    "stops": [
+      { "stationCode": "GMR", "stationName": "Stasiun Gambir", "arrival": "START", "departure": "20:45", "distanceFromOriginKm": 0, "latitude": -6.1767, "longitude": 106.8306 },
+      { "stationCode": "CN", "stationName": "Stasiun Cirebon", "arrival": "23:20", "departure": "23:25", "distanceFromOriginKm": 219, "latitude": -6.7053, "longitude": 108.5553 },
+      { "stationCode": "PWT", "stationName": "Stasiun Purwokerto", "arrival": "01:15", "departure": "01:22", "distanceFromOriginKm": 350, "latitude": -7.4189, "longitude": 109.2225 },
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "03:10", "departure": "03:15", "distanceFromOriginKm": 512, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "04:00", "departure": "END", "distanceFromOriginKm": 572, "latitude": -7.5583, "longitude": 110.8214 }
+    ]
+  },
+  {
+    "id": "AD-10",
+    "trainName": "Argo Dwipangga (Solo Balapan - Gambir)",
+    "trainNumber": "AD-10",
+    "category": "Antarkota",
+    "origin": "Stasiun Solo Balapan",
+    "destination": "Stasiun Gambir",
+    "stops": [
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "START", "departure": "08:50", "distanceFromOriginKm": 0, "latitude": -7.5583, "longitude": 110.8214 },
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "09:35", "departure": "09:40", "distanceFromOriginKm": 60, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "PWT", "stationName": "Stasiun Purwokerto", "arrival": "11:30", "departure": "11:37", "distanceFromOriginKm": 222, "latitude": -7.4189, "longitude": 109.2225 },
+      { "stationCode": "CN", "stationName": "Stasiun Cirebon", "arrival": "13:28", "departure": "13:33", "distanceFromOriginKm": 353, "latitude": -6.7053, "longitude": 108.5553 },
+      { "stationCode": "GMR", "stationName": "Stasiun Gambir", "arrival": "16:10", "departure": "END", "distanceFromOriginKm": 572, "latitude": -6.1767, "longitude": 106.8306 }
+    ]
+  },
+  {
+    "id": "TAK-68",
+    "trainName": "Taksaka (Gambir - Yogyakarta)",
+    "trainNumber": "TAK-68",
+    "category": "Antarkota",
+    "origin": "Stasiun Gambir",
+    "destination": "Stasiun Yogyakarta (Tugu)",
+    "stops": [
+      { "stationCode": "GMR", "stationName": "Stasiun Gambir", "arrival": "START", "departure": "09:20", "distanceFromOriginKm": 0, "latitude": -6.1767, "longitude": 106.8306 },
+      { "stationCode": "CN", "stationName": "Stasiun Cirebon", "arrival": "12:00", "departure": "12:05", "distanceFromOriginKm": 219, "latitude": -6.7053, "longitude": 108.5553 },
+      { "stationCode": "PWT", "stationName": "Stasiun Purwokerto", "arrival": "14:05", "departure": "14:12", "distanceFromOriginKm": 350, "latitude": -7.4189, "longitude": 109.2225 },
+      { "stationCode": "KTA", "stationName": "Stasiun Kutoarjo", "arrival": "15:20", "departure": "15:23", "distanceFromOriginKm": 450, "latitude": -7.7175, "longitude": 109.9078 },
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "16:10", "departure": "END", "distanceFromOriginKm": 512, "latitude": -7.7892, "longitude": 110.3635 }
+    ]
+  },
+  {
+    "trainName": "Gajayana (Gambir - Malang)",
+    "trainNumber": "GJ-56",
+    "id": "GJ-56",
+    "category": "Antarkota",
+    "origin": "Stasiun Gambir",
+    "destination": "Stasiun Malang",
+    "stops": [
+      { "stationCode": "GMR", "stationName": "Stasiun Gambir", "arrival": "START", "departure": "18:40", "distanceFromOriginKm": 0, "latitude": -6.1767, "longitude": 106.8306 },
+      { "stationCode": "CN", "stationName": "Stasiun Cirebon", "arrival": "21:20", "departure": "21:25", "distanceFromOriginKm": 219, "latitude": -6.7053, "longitude": 108.5553 },
+      { "stationCode": "PWT", "stationName": "Stasiun Purwokerto", "arrival": "23:25", "departure": "23:32", "distanceFromOriginKm": 350, "latitude": -7.4189, "longitude": 109.2225 },
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "01:30", "departure": "01:35", "distanceFromOriginKm": 512, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "02:30", "departure": "02:35", "distanceFromOriginKm": 572, "latitude": -7.5583, "longitude": 110.8214 },
+      { "stationCode": "MN", "stationName": "Stasiun Madiun", "arrival": "03:50", "departure": "03:55", "distanceFromOriginKm": 670, "latitude": -7.6186, "longitude": 111.5242 },
+      { "stationCode": "KD", "stationName": "Stasiun Kediri", "arrival": "05:00", "departure": "05:03", "distanceFromOriginKm": 735, "latitude": -7.8172, "longitude": 112.0153 },
+      { "stationCode": "BL", "stationName": "Stasiun Blitar", "arrival": "05:48", "departure": "05:52", "distanceFromOriginKm": 780, "latitude": -8.1006, "longitude": 112.1644 },
+      { "stationCode": "ML", "stationName": "Stasiun Malang", "arrival": "06:50", "departure": "END", "distanceFromOriginKm": 870, "latitude": -7.9772, "longitude": 112.6373 }
+    ]
+  },
+  {
+    "id": "LD-92",
+    "trainName": "Lodaya (Bandung - Solo Balapan)",
+    "trainNumber": "LD-92",
+    "category": "Antarkota",
+    "origin": "Stasiun Bandung (Hall)",
+    "destination": "Stasiun Solo Balapan",
+    "stops": [
+      { "stationCode": "BD", "stationName": "Stasiun Bandung (Hall)", "arrival": "START", "departure": "07:05", "distanceFromOriginKm": 0, "latitude": -6.9147, "longitude": 107.6025 },
+      { "stationCode": "KAC", "stationName": "Stasiun Kiaracondong", "arrival": "07:16", "departure": "07:20", "distanceFromOriginKm": 7, "latitude": -6.9247, "longitude": 107.6465 },
+      { "stationCode": "TSM", "stationName": "Stasiun Tasikmalaya", "arrival": "09:40", "departure": "09:43", "distanceFromOriginKm": 115, "latitude": -7.3225, "longitude": 108.2238 },
+      { "stationCode": "PWT", "stationName": "Stasiun Purwokerto", "arrival": "12:35", "departure": "12:42", "distanceFromOriginKm": 258, "latitude": -7.4189, "longitude": 109.2225 },
+      { "stationCode": "KTA", "stationName": "Stasiun Kutoarjo", "arrival": "13:50", "departure": "13:54", "distanceFromOriginKm": 350, "latitude": -7.7175, "longitude": 109.9078 },
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "14:42", "departure": "14:48", "distanceFromOriginKm": 412, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "15:35", "departure": "END", "distanceFromOriginKm": 472, "latitude": -7.5583, "longitude": 110.8214 }
+    ]
+  },
+  {
+    "id": "SC-100",
+    "trainName": "Sancaka (Yogyakarta - Surabaya Gubeng)",
+    "trainNumber": "SC-100",
+    "category": "Antarkota",
+    "origin": "Stasiun Yogyakarta (Tugu)",
+    "destination": "Stasiun Surabaya Gubeng",
+    "stops": [
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "START", "departure": "06:45", "distanceFromOriginKm": 0, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "07:32", "departure": "07:36", "distanceFromOriginKm": 60, "latitude": -7.5583, "longitude": 110.8214 },
+      { "stationCode": "MN", "stationName": "Stasiun Madiun", "arrival": "08:45", "departure": "08:50", "distanceFromOriginKm": 158, "latitude": -7.6186, "longitude": 111.5242 },
+      { "stationCode": "SGU", "stationName": "Stasiun Surabaya Gubeng", "arrival": "10:45", "departure": "END", "distanceFromOriginKm": 310, "latitude": -7.2653, "longitude": 112.7521 }
+    ]
+  },
+  {
+    "id": "MM-233",
+    "trainName": "Matarmaja (Pasar Senen - Malang)",
+    "trainNumber": "MM-233",
+    "category": "Antarkota",
+    "origin": "Stasiun Pasar Senen",
+    "destination": "Stasiun Malang",
+    "stops": [
+      { "stationCode": "PSE", "stationName": "Stasiun Pasar Senen", "arrival": "START", "departure": "10:30", "distanceFromOriginKm": 0, "latitude": -6.1856, "longitude": 106.845 },
+      { "stationCode": "CPN", "stationName": "Stasiun Cirebon Prujakan", "arrival": "13:40", "departure": "13:48", "distanceFromOriginKm": 220, "latitude": -6.7161, "longitude": 108.5601 },
+      { "stationCode": "TGL", "stationName": "Stasiun Tegal", "arrival": "14:50", "departure": "14:55", "distanceFromOriginKm": 295, "latitude": -6.8681, "longitude": 109.1417 },
+      { "stationCode": "SMC", "stationName": "Stasiun Semarang Poncol", "arrival": "17:00", "departure": "17:08", "distanceFromOriginKm": 440, "latitude": -6.9725, "longitude": 110.4136 },
+      { "stationCode": "SLO", "stationName": "Stasiun Solo Balapan", "arrival": "19:30", "departure": "19:38", "distanceFromOriginKm": 550, "latitude": -7.5583, "longitude": 110.8214 },
+      { "stationCode": "MN", "stationName": "Stasiun Madiun", "arrival": "20:55", "departure": "21:03", "distanceFromOriginKm": 650, "latitude": -7.6186, "longitude": 111.5242 },
+      { "stationCode": "ML", "stationName": "Stasiun Malang", "arrival": "01:20", "departure": "END", "distanceFromOriginKm": 850, "latitude": -7.9772, "longitude": 112.6373 }
+    ]
+  },
+  {
+    "id": "CL-4101",
+    "trainName": "Commuter Line Bogor (Jakarta Kota - Bogor)",
+    "trainNumber": "CL-4101",
+    "category": "Commuter Line",
+    "origin": "Stasiun Jakarta Kota",
+    "destination": "Stasiun Bogor",
+    "stops": [
+      { "stationCode": "JAKK", "stationName": "Stasiun Jakarta Kota", "arrival": "START", "departure": "06:15", "distanceFromOriginKm": 0, "latitude": -6.1375, "longitude": 106.8146 },
+      { "stationCode": "MRI", "stationName": "Stasiun Manggarai", "arrival": "06:30", "departure": "06:31", "distanceFromOriginKm": 10, "latitude": -6.2099, "longitude": 106.8502 },
+      { "stationCode": "DPK", "stationName": "Stasiun Depok", "arrival": "07:05", "departure": "07:06", "distanceFromOriginKm": 32, "latitude": -6.4058, "longitude": 106.8188 },
+      { "stationCode": "CTA", "stationName": "Stasiun Citayam", "arrival": "07:15", "departure": "07:16", "distanceFromOriginKm": 38, "latitude": -6.4488, "longitude": 106.8021 },
+      { "stationCode": "BJG", "stationName": "Stasiun Bojong Gede", "arrival": "07:25", "departure": "07:26", "distanceFromOriginKm": 44, "latitude": -6.4932, "longitude": 106.7951 },
+      { "stationCode": "CLT", "stationName": "Stasiun Cilebut", "arrival": "07:32", "departure": "07:33", "distanceFromOriginKm": 48, "latitude": -6.5305, "longitude": 106.8006 },
+      { "stationCode": "BOO", "stationName": "Stasiun Bogor", "arrival": "07:45", "departure": "END", "distanceFromOriginKm": 55, "latitude": -6.5962, "longitude": 106.7907 }
+    ]
+  },
+  {
+    "id": "CL-4102",
+    "trainName": "Commuter Line Jakarta (Bogor - Jakarta Kota)",
+    "trainNumber": "CL-4102",
+    "category": "Commuter Line",
+    "origin": "Stasiun Bogor",
+    "destination": "Stasiun Jakarta Kota",
+    "stops": [
+      { "stationCode": "BOO", "stationName": "Stasiun Bogor", "arrival": "START", "departure": "06:30", "distanceFromOriginKm": 0, "latitude": -6.5962, "longitude": 106.7907 },
+      { "stationCode": "CLT", "stationName": "Stasiun Cilebut", "arrival": "06:40", "departure": "06:41", "distanceFromOriginKm": 7, "latitude": -6.5305, "longitude": 106.8006 },
+      { "stationCode": "BJG", "stationName": "Stasiun Bojong Gede", "arrival": "06:47", "departure": "06:48", "distanceFromOriginKm": 11, "latitude": -6.4932, "longitude": 106.7951 },
+      { "stationCode": "CTA", "stationName": "Stasiun Citayam", "arrival": "06:57", "departure": "06:58", "distanceFromOriginKm": 17, "latitude": -6.4488, "longitude": 106.8021 },
+      { "stationCode": "DPK", "stationName": "Stasiun Depok", "arrival": "07:07", "departure": "07:08", "distanceFromOriginKm": 23, "latitude": -6.4058, "longitude": 106.8188 },
+      { "stationCode": "MRI", "stationName": "Stasiun Manggarai", "arrival": "07:42", "departure": "07:43", "distanceFromOriginKm": 45, "latitude": -6.2099, "longitude": 106.8502 },
+      { "stationCode": "JAKK", "stationName": "Stasiun Jakarta Kota", "arrival": "08:00", "departure": "END", "distanceFromOriginKm": 55, "latitude": -6.1375, "longitude": 106.8146 }
+    ]
+  },
+  {
+    "id": "CL-5001",
+    "trainName": "Commuter Line Cikarang (Kampung Bandan - Cikarang)",
+    "trainNumber": "CL-5001",
+    "category": "Commuter Line",
+    "origin": "Stasiun Kampung Bandan",
+    "destination": "Stasiun Bekasi",
+    "stops": [
+      { "stationCode": "KPB", "stationName": "Stasiun Kampung Bandan", "arrival": "START", "departure": "05:30", "distanceFromOriginKm": 0, "latitude": -6.1328, "longitude": 106.8247 },
+      { "stationCode": "PSE", "stationName": "Stasiun Pasar Senen", "arrival": "05:42", "departure": "05:43", "distanceFromOriginKm": 6, "latitude": -6.1856, "longitude": 106.845 },
+      { "stationCode": "JNG", "stationName": "Stasiun Jatinegara", "arrival": "05:55", "departure": "05:56", "distanceFromOriginKm": 12, "latitude": -6.2151, "longitude": 106.8704 },
+      { "stationCode": "BKS", "stationName": "Stasiun Bekasi", "arrival": "06:20", "departure": "END", "distanceFromOriginKm": 27, "latitude": -6.2361, "longitude": 106.9994 }
+    ]
+  },
+  {
+    "id": "CL-2001",
+    "trainName": "Commuter Line Rangkasbitung (Tanah Abang - Rangkasbitung)",
+    "trainNumber": "CL-2001",
+    "category": "Commuter Line",
+    "origin": "Stasiun Tanah Abang",
+    "destination": "Stasiun Rangkasbitung",
+    "stops": [
+      { "stationCode": "THB", "stationName": "Stasiun Tanah Abang", "arrival": "START", "departure": "06:00", "distanceFromOriginKm": 0, "latitude": -6.1858, "longitude": 106.8105 },
+      { "stationCode": "RK", "stationName": "Stasiun Rangkasbitung", "arrival": "07:45", "departure": "END", "distanceFromOriginKm": 72, "latitude": -6.3603, "longitude": 106.2483 }
+    ]
+  },
+  {
+    "id": "CL-1001",
+    "trainName": "Commuter Line Tangerang (Tanah Abang - Tangerang)",
+    "trainNumber": "CL-1001",
+    "category": "Commuter Line",
+    "origin": "Stasiun Tanah Abang",
+    "destination": "Stasiun Tangerang",
+    "stops": [
+      { "stationCode": "THB", "stationName": "Stasiun Tanah Abang", "arrival": "START", "departure": "06:10", "distanceFromOriginKm": 0, "latitude": -6.1858, "longitude": 106.8105 },
+      { "stationCode": "TNG", "stationName": "Stasiun Tangerang", "arrival": "06:50", "departure": "END", "distanceFromOriginKm": 22, "latitude": -6.1764, "longitude": 106.6341 }
+    ]
+  },
+  {
+    "id": "KAB-901",
+    "trainName": "KA Bandara Soekarno-Hatta (Manggarai - Bandara)",
+    "trainNumber": "KAB-901",
+    "category": "Bandara",
+    "origin": "Stasiun Manggarai",
+    "destination": "Stasiun Bandara Soekarno-Hatta",
+    "stops": [
+      { "stationCode": "MRI", "stationName": "Stasiun Manggarai", "arrival": "START", "departure": "06:00", "distanceFromOriginKm": 0, "latitude": -6.2099, "longitude": 106.8502 },
+      { "stationCode": "BST", "stationName": "Stasiun Bandara Soekarno-Hatta", "arrival": "06:52", "departure": "END", "distanceFromOriginKm": 38, "latitude": -6.1264, "longitude": 106.6547 }
+    ]
+  },
+  {
+    "id": "KAB-902",
+    "trainName": "KA Bandara YIA (Yogyakarta - Bandara YIA)",
+    "trainNumber": "KAB-902",
+    "category": "Bandara",
+    "origin": "Stasiun Yogyakarta (Tugu)",
+    "destination": "Stasiun Bandara YIA",
+    "stops": [
+      { "stationCode": "YK", "stationName": "Stasiun Yogyakarta (Tugu)", "arrival": "START", "departure": "05:00", "distanceFromOriginKm": 0, "latitude": -7.7892, "longitude": 110.3635 },
+      { "stationCode": "KTA", "stationName": "Stasiun Kutoarjo", "arrival": "05:25", "departure": "05:27", "distanceFromOriginKm": 35, "latitude": -7.7175, "longitude": 109.9078 },
+      { "stationCode": "YIA", "stationName": "Stasiun Bandara YIA", "arrival": "05:39", "departure": "END", "distanceFromOriginKm": 48, "latitude": -7.9006, "longitude": 110.0578 }
+    ]
+  }
+]

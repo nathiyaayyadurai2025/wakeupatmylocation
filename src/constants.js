@@ -33,6 +33,21 @@ export const TRANSLATIONS = {
     distance: 'தூரம்',
     arrival: 'வருகை நேரம்',
     tracking: 'நேரடி டிராக்கிங்'
+  },
+  id: {
+    title: 'WakeMyStop',
+    tagline: 'Alarm Perjalanan & Pelacak GPS Terpercaya',
+    selectMode: 'Pilih Mode Misi',
+    train: 'Perjalanan Kereta',
+    bus: 'Perjalanan Bus',
+    general: 'GPS Umum',
+    settings: 'Pengaturan',
+    searchTrain: 'Cari Nomor atau Nama Kereta',
+    searchStop: 'Di mana Anda ingin dibangunkan?',
+    activate: 'Aktifkan Misi',
+    distance: 'Jarak',
+    arrival: 'Perkiraan Tiba',
+    tracking: 'Pelacakan Satelit Langsung'
   }
 };
 
@@ -450,8 +465,169 @@ export const TRAIN_DATA = [
         "km": 809
       }
     ]
+  },
+  {
+    "trainNumber": "ABA-1",
+    "trainName": "Argo Bromo Anggrek",
+    "from": "Stasiun Gambir",
+    "to": "Stasiun Surabaya Gubeng",
+    "category": "Intercity Trains",
+    "stops": [
+      { "station": "Stasiun Gambir", "arrival": "START", "departure": "08:20", "lat": -6.1767, "lng": 106.8306, "km": 0 },
+      { "station": "Stasiun Surabaya Gubeng", "arrival": "16:45", "departure": "END", "lat": -7.2653, "lng": 112.7521, "km": 720 }
+    ]
+  },
+  {
+    "trainNumber": "AP-36",
+    "trainName": "Argo Parahyangan",
+    "from": "Stasiun Gambir",
+    "to": "Stasiun Bandung",
+    "category": "Intercity Trains",
+    "stops": [
+      { "station": "Stasiun Gambir", "arrival": "START", "departure": "06:30", "lat": -6.1767, "lng": 106.8306, "km": 0 },
+      { "station": "Stasiun Bandung", "arrival": "09:15", "departure": "END", "lat": -6.9147, "lng": 107.6025, "km": 150 }
+    ]
+  },
+  {
+    "trainNumber": "LD-92",
+    "trainName": "Lodaya",
+    "from": "Stasiun Bandung",
+    "to": "Stasiun Solo Balapan",
+    "category": "Intercity Trains",
+    "stops": [
+      { "station": "Stasiun Bandung", "arrival": "START", "departure": "07:00", "lat": -6.9147, "lng": 107.6025, "km": 0 },
+      { "station": "Stasiun Yogyakarta / Tugu", "arrival": "14:20", "departure": "14:25", "lat": -7.7892, "lng": 110.3635, "km": 380 },
+      { "station": "Stasiun Solo Balapan", "arrival": "15:20", "departure": "END", "lat": -7.5583, "lng": 110.8214, "km": 440 }
+    ]
+  },
+  {
+    "trainNumber": "GJ-56",
+    "trainName": "Gajayana",
+    "from": "Stasiun Gambir",
+    "to": "Stasiun Malang",
+    "category": "Intercity Trains",
+    "stops": [
+      { "station": "Stasiun Gambir", "arrival": "START", "departure": "18:40", "lat": -6.1767, "lng": 106.8306, "km": 0 },
+      { "station": "Stasiun Yogyakarta / Tugu", "arrival": "01:30", "departure": "01:35", "lat": -7.7892, "lng": 110.3635, "km": 512 },
+      { "station": "Stasiun Solo Balapan", "arrival": "02:30", "departure": "02:35", "lat": -7.5583, "lng": 110.8214, "km": 572 },
+      { "station": "Stasiun Malang", "arrival": "06:50", "departure": "END", "lat": -7.9772, "lng": 112.6373, "km": 870 }
+    ]
+  },
+  {
+    "trainNumber": "MM-233",
+    "trainName": "Matarmaja",
+    "from": "Stasiun Pasar Senen",
+    "to": "Stasiun Malang",
+    "category": "Intercity Trains",
+    "stops": [
+      { "station": "Stasiun Pasar Senen", "arrival": "START", "departure": "10:30", "lat": -6.1856, "lng": 106.8450, "km": 0 },
+      { "station": "Stasiun Solo Balapan", "arrival": "18:45", "departure": "18:50", "lat": -7.5583, "lng": 110.8214, "km": 570 },
+      { "station": "Stasiun Malang", "arrival": "23:05", "departure": "END", "lat": -7.9772, "lng": 112.6373, "km": 870 }
+    ]
+  },
+  {
+    "trainNumber": "SC-100",
+    "trainName": "Sancaka",
+    "from": "Stasiun Yogyakarta / Tugu",
+    "to": "Stasiun Surabaya Gubeng",
+    "category": "Intercity Trains",
+    "stops": [
+      { "station": "Stasiun Yogyakarta / Tugu", "arrival": "START", "departure": "06:45", "lat": -7.7892, "lng": 110.3635, "km": 0 },
+      { "station": "Stasiun Solo Balapan", "arrival": "07:35", "departure": "07:40", "lat": -7.5583, "lng": 110.8214, "km": 60 },
+      { "station": "Stasiun Surabaya Gubeng", "arrival": "10:45", "departure": "END", "lat": -7.2653, "lng": 112.7521, "km": 320 }
+    ]
+  },
+  {
+    "trainNumber": "CL-4101",
+    "trainName": "Commuter Line Bogor (Tujuan Bogor)",
+    "from": "Stasiun Jakarta Kota",
+    "to": "Stasiun Bogor",
+    "category": "Commuter Line Trains",
+    "stops": [
+      { "station": "Stasiun Jakarta Kota", "arrival": "START", "departure": "06:15", "lat": -6.1375, "lng": 106.8146, "km": 0 },
+      { "station": "Stasiun Manggarai", "arrival": "06:30", "departure": "06:31", "lat": -6.2099, "lng": 106.8502, "km": 10 },
+      { "station": "Stasiun Depok", "arrival": "07:05", "departure": "07:06", "lat": -6.4058, "lng": 106.8188, "km": 32 },
+      { "station": "Stasiun Citayam", "arrival": "07:15", "departure": "07:16", "lat": -6.4488, "lng": 106.8021, "km": 38 },
+      { "station": "Stasiun Bojong Gede", "arrival": "07:25", "departure": "07:26", "lat": -6.4932, "lng": 106.7951, "km": 44 },
+      { "station": "Stasiun Cilebut", "arrival": "07:32", "departure": "07:33", "lat": -6.5305, "lng": 106.8006, "km": 48 },
+      { "station": "Stasiun Bogor", "arrival": "07:45", "departure": "END", "lat": -6.5962, "lng": 106.7907, "km": 55 }
+    ]
+  },
+  {
+    "trainNumber": "CL-4102",
+    "trainName": "Commuter Line Jakarta (Tujuan Jakarta Kota)",
+    "from": "Stasiun Bogor",
+    "to": "Stasiun Jakarta Kota",
+    "category": "Commuter Line Trains",
+    "stops": [
+      { "station": "Stasiun Bogor", "arrival": "START", "departure": "06:30", "lat": -6.5962, "lng": 106.7907, "km": 0 },
+      { "station": "Stasiun Cilebut", "arrival": "06:40", "departure": "06:41", "lat": -6.5305, "lng": 106.8006, "km": 7 },
+      { "station": "Stasiun Bojong Gede", "arrival": "06:47", "departure": "06:48", "lat": -6.4932, "lng": 106.7951, "km": 11 },
+      { "station": "Stasiun Citayam", "arrival": "06:57", "departure": "06:58", "lat": -6.4488, "lng": 106.8021, "km": 17 },
+      { "station": "Stasiun Depok", "arrival": "07:07", "departure": "07:08", "lat": -6.4058, "lng": 106.8188, "km": 23 },
+      { "station": "Stasiun Manggarai", "arrival": "07:42", "departure": "07:43", "lat": -6.2099, "lng": 106.8502, "km": 45 },
+      { "station": "Stasiun Jakarta Kota", "arrival": "08:00", "departure": "END", "lat": -6.1375, "lng": 106.8146, "km": 55 }
+    ]
   }
 ];
+
+export const INDONESIA_COMMUTER_ROUTES = [
+  {
+    id: "commuter-bogor-line",
+    name: "KAI Commuter Line Bogor (Jakarta Kota - Bogor)",
+    type: "commuter",
+    stations: [
+      { id: "JAKK", name: "Stasiun Jakarta Kota", lat: -6.1375, lng: 106.8146 },
+      { id: "MRI", name: "Stasiun Manggarai", lat: -6.2099, lng: 106.8502 },
+      { id: "DPK", name: "Stasiun Depok", lat: -6.4058, lng: 106.8188 },
+      { id: "CTA", name: "Stasiun Citayam", lat: -6.4488, lng: 106.8021 },
+      { id: "BJG", name: "Stasiun Bojong Gede", lat: -6.4932, lng: 106.7951 },
+      { id: "CLT", name: "Stasiun Cilebut", lat: -6.5305, lng: 106.8006 },
+      { id: "BOO", name: "Stasiun Bogor", lat: -6.5962, lng: 106.7907 }
+    ],
+    trains: [
+      {
+        id: "KRL-4101",
+        number: "CL-4101",
+        name: "Commuter Line Bogor (Tujuan Bogor)",
+        depTime: "06:15",
+        origin: "Stasiun Jakarta Kota",
+        destination: "Stasiun Bogor",
+        type: "Commuter"
+      },
+      {
+        id: "KRL-4102",
+        number: "CL-4102",
+        name: "Commuter Line Jakarta (Tujuan Jakarta Kota)",
+        depTime: "06:30",
+        origin: "Stasiun Bogor",
+        destination: "Stasiun Jakarta Kota",
+        type: "Commuter"
+      }
+    ]
+  }
+];
+
+export const TRAIN_ROUTES = TRAIN_DATA.map(t => {
+  const fromStation = t.stops[0]?.station || t.stops[0]?.name || '';
+  const toStation = t.stops[t.stops.length - 1]?.station || t.stops[t.stops.length - 1]?.name || '';
+  return {
+    id: t.trainNumber.toLowerCase().replace(/\s+/g, '-'),
+    name: `${t.trainName} (${fromStation} - ${toStation})`,
+    type: t.category === "Commuter Line Trains" ? "commuter" : "train",
+    category: t.category || "Intercity Trains",
+    stations: t.stops.map(s => {
+      const sName = s.station || s.name || '';
+      return {
+        id: sName.toLowerCase().replace(/\s+/g, '-'),
+        name: sName,
+        lat: s.lat,
+        lng: s.lng,
+        distanceFromStart: s.km !== undefined ? s.km : (s.distanceFromOriginKm !== undefined ? s.distanceFromOriginKm : 0)
+      };
+    })
+  };
+});
 
 export const BUS_ROUTES = [
   {

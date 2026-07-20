@@ -779,7 +779,7 @@ const TrackingPage = () => {
         {/* Recenter */}
         <button
           onClick={() => setRecenterKey(k => k + 1)}
-          className="w-12 h-12 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-brand-cyan shadow-xl hover:bg-slate-800/90 transition-all"
+          className="w-14 h-14 bg-slate-900/90 backdrop-blur-md border border-white/10 rounded-2xl flex items-center justify-center text-brand-cyan shadow-xl hover:bg-slate-800/90 transition-all"
           title="Recenter map"
         >
           <LocateFixed size={20} />
@@ -787,8 +787,8 @@ const TrackingPage = () => {
 
         {/* Auto-follow toggle */}
         <button
-          onClick={() => setAutoFollow(!autoFollow)}
-          className={`w-12 h-12 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${autoFollow ? 'border-brand-cyan/50 text-brand-cyan' : 'border-white/10 text-slate-500'}`}
+           onClick={() => setAutoFollow(!autoFollow)} aria-pressed={autoFollow}
+          className={`w-14 h-14 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${autoFollow ? 'border-brand-cyan/50 text-brand-cyan' : 'border-white/10 text-slate-500'}`}
           title={autoFollow ? 'Auto-follow ON' : 'Auto-follow OFF'}
         >
           <Navigation size={18} className={autoFollow ? 'fill-current' : ''} />
@@ -796,8 +796,8 @@ const TrackingPage = () => {
 
         {/* Debug toggle */}
         <button
-          onClick={() => setIsDebugActive(!isDebugActive)}
-          className={`w-12 h-12 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${isDebugActive ? 'border-amber-500/50 text-amber-400' : 'border-white/10 text-slate-400'}`}
+          onClick={() => setIsDebugActive(!isDebugActive)} aria-pressed={isDebugActive}
+          className={`w-14 h-14 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${isDebugActive ? 'border-amber-500/50 text-amber-400' : 'border-white/10 text-slate-400'}`}
           title="Toggle Debug Mode"
         >
           <Terminal size={18} />
@@ -805,8 +805,8 @@ const TrackingPage = () => {
 
         {/* Simulation toggle */}
         <button
-          onClick={() => setIsSimSliderActive(!isSimSliderActive)}
-          className={`w-12 h-12 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${isSimSliderActive ? 'border-violet-500/50 text-violet-400' : 'border-white/10 text-slate-400'}`}
+          onClick={() => setIsSimSliderActive(!isSimSliderActive)} aria-pressed={isSimSliderActive}
+          className={`w-14 h-14 bg-slate-900/90 backdrop-blur-md border rounded-2xl flex items-center justify-center shadow-xl transition-all ${isSimSliderActive ? 'border-violet-500/50 text-violet-400' : 'border-white/10 text-slate-400'}`}
           title="Simulation Mode"
         >
           <Sliders size={18} />
@@ -1029,19 +1029,19 @@ const TrackingPage = () => {
               </div>
               <div>
                 <h2 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">Route Progress</h2>
-                <p className="text-lg font-light text-gradient truncate max-w-[170px]">
+                <p className="text-2xl font-light text-gradient truncate max-w-[170px]">
                   {travelMode === 'train' ? selectedTrain?.trainName : travelMode === 'bus' ? selectedBusRoute?.routeName : 'Live Tracking'}
                 </p>
               </div>
             </div>
             <div className="flex items-center space-x-2">
               {/* Live blip */}
-              <div className="flex items-center space-x-1.5 bg-green-900/30 border border-green-500/20 px-2.5 py-1 rounded-full">
+               <div className="flex items-center space-x-1.5 bg-green-600/20 border border-green-500/20 px-3 py-1 rounded-full">
                 <div className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
-                <span className="text-[8px] font-black text-green-400 uppercase tracking-widest">LIVE</span>
+                <span className="text-[9px] font-black text-green-500 uppercase tracking-widest">LIVE</span>
               </div>
-              <div className="w-8 h-8 rounded-full glass-interactive flex items-center justify-center text-slate-400">
-                {topMinimized ? <ChevronDown size={18} /> : <ChevronUp size={18} />}
+              <div className="w-10 h-10 rounded-full glass-interactive flex items-center justify-center text-slate-400">
+                {topMinimized ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
               </div>
             </div>
           </div>
@@ -1155,7 +1155,7 @@ const TrackingPage = () => {
             <div className="space-y-1">
               <h3 className="text-[10px] font-black text-slate-500 uppercase tracking-[0.3em]">{bottomMinimized ? 'Distance Remaining' : 'Mission Telemetry'}</h3>
               <div className="flex items-end space-x-2">
-                <span className={`${bottomMinimized ? 'text-3xl' : 'text-5xl'} font-light text-white tracking-tighter tabular-nums transition-all duration-500`}>{remainingDistance ?? '--'}</span>
+                 <span className={`${bottomMinimized ? 'text-5xl' : 'text-8xl'} font-light text-white tracking-tighter tabular-nums transition-all duration-500`}>{remainingDistance ?? '--'}</span>
                 <span className="text-lg font-black text-brand-cyan mb-1 uppercase">KM</span>
               </div>
             </div>
