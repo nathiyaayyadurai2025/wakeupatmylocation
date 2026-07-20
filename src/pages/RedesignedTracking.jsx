@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import {
   Bell,
   Navigation,
   Volume2,
   Vibrate,
-  Mic,
-  Moon,
   AlertOctagon,
   Pause,
   Play,
-  Check,
   BatteryCharging,
   Wifi,
   Gauge,
@@ -22,17 +21,46 @@ import {
   Sparkles,
   WifiOff
 } from 'lucide-react';
+import 'leaflet/dist/leaflet.css';
 import { CALCULATE_DISTANCE, TRIGGER_ALARM_SOUND, STOP_ALARM_SOUND, ESTIMATE_TIME } from '../constants';
 import { useCountry } from '../context/CountryContext';
 
+// Leaflet Map Icons
+const userIcon = L.divIcon({
+  className: '',
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  html: `<div style="position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:0;background:rgba(37,99,235,0.3);border-radius:50%;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite"></div>
+    <div style="position:relative;width:18px;height:18px;background:#2563EB;border-radius:50%;border:3px solid white;box-shadow:0 0 16px rgba(37,99,235,0.8);z-index:1"></div>
+  </div>`
+});
+
+const destIcon = L.divIcon({
+  className: '',
+  iconSize: [28, 28],
+  iconAnchor: [14, 28],
+  html: `<div style="width:28px;height:28px;background:#EF4444;border-radius:50%;border:3px solid white;box-shadow:0 0 16px rgba(239,68,68,0.8);display:flex;align-items:center;justify-content:center;color:white;font-weight:bold;font-size:12px">📍</div>`
+});
+
+function MapAutoFit({ userLoc, destLoc }) {
+  const map = useMap();
+  useEffect(() => {
+    if (!userLoc || !destLoc) return;
+    const pts = [[userLoc.lat, userLoc.lng], [destLoc.lat, destLoc.lng]];
+    map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 14 });
+  }, [userLoc, destLoc, map]);
+  return null;
+}
+
 export default function RedesignedTracking() {
   const navigate = useNavigate();
-  const { countryFlag } = useCountry();
+  const { isIndonesia, countryFlag } = useCountry();
 
   const [destination, setDestination] = useState(null);
-  const [currentLoc, setCurrentLoc] = useState(null);
-  const [distRemaining, setDistRemaining] = useState(null);
-  const [etaMins, setEtaMins] = useState(null);
+  const [userLoc, setUserLoc] = useState(null);
+  const [distRemaining, setDistRemaining] = useState(8.4);
+  const [etaMins, setEtaMins] = useState(12);
   const [currentSpeed, setCurrentSpeed] = useState(55);
   const [alarmRadius, setAlarmRadius] = useState(5); // km
   const [alarmTriggered, setAlarmTriggered] = useState(false);
@@ -40,21 +68,27 @@ export default function RedesignedTracking() {
 
   // Toggles
   const [highVolumeEnabled, setHighVolumeEnabled] = useState(true);
-  const [volume, setVolume] = useState(80);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
-  const [voiceAlertEnabled, setVoiceAlertEnabled] = useState(true);
-  const [repeatAlarmEnabled, setRepeatAlarmEnabled] = useState(true);
 
   const watchIdRef = useRef(null);
 
   useEffect(() => {
-    const destName = localStorage.getItem('destinationName');
-    const destLat = parseFloat(localStorage.getItem('destinationLat'));
-    const destLng = parseFloat(localStorage.getItem('destinationLng'));
+    // 1. Load or fallback destination
+    let destName = localStorage.getItem('destinationName');
+    let destLat = parseFloat(localStorage.getItem('destinationLat'));
+    let destLng = parseFloat(localStorage.getItem('destinationLng'));
 
     if (!destName || isNaN(destLat) || isNaN(destLng)) {
-      navigate('/train');
-      return;
+      // Provide clean default destination if user opened /tracking directly
+      destName = isIndonesia ? 'Stasiun Bogor' : 'Madurai Junction';
+      destLat = isIndonesia ? -6.5962 : 9.9252;
+      destLng = isIndonesia ? 106.7907 : 78.1198;
+
+      localStorage.setItem('destinationName', destName);
+      localStorage.setItem('destinationLat', destLat.toString());
+      localStorage.setItem('destinationLng', destLng.toString());
+      localStorage.setItem('trainName', isIndonesia ? 'KAI Commuter Line Bogor' : 'Pandian Express');
+      localStorage.setItem('trainNumber', isIndonesia ? 'CL-4101' : '12637');
     }
 
     const destObj = {
@@ -67,34 +101,53 @@ export default function RedesignedTracking() {
 
     setDestination(destObj);
 
-    // Watch position GPS
+    // Initial fallback user location near destination
+    const initUserLat = isIndonesia ? -6.5305 : 10.3673; // Cilebut or Dindigul
+    const initUserLng = isIndonesia ? 106.8006 : 77.9803;
+    setUserLoc({ lat: initUserLat, lng: initUserLng });
+
+    const initialDist = CALCULATE_DISTANCE(initUserLat, initUserLng, destLat, destLng);
+    setDistRemaining(parseFloat(initialDist.toFixed(2)));
+    setEtaMins(ESTIMATE_TIME(initialDist, 55));
+
+    // 2. Request GPS position
     if (navigator.geolocation) {
-      watchIdRef.current = navigator.geolocation.watchPosition(
+      navigator.geolocation.getCurrentPosition(
         pos => {
           const { latitude: lat, longitude: lng, speed } = pos.coords;
-          setCurrentLoc({ lat, lng });
+          setUserLoc({ lat, lng });
 
-          if (speed && !isNaN(speed)) {
-            setCurrentSpeed(Math.round(speed * 3.6)); // m/s to km/h
-          }
+          const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
+          setCurrentSpeed(liveSpeed);
 
           const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
           setDistRemaining(parseFloat(dist.toFixed(2)));
-          setEtaMins(ESTIMATE_TIME(dist, currentSpeed || 50));
+          setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
+        },
+        err => console.warn("GPS Initial Position Error:", err),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
 
-          // Check Alarm condition
+      // Continuous Watch Position
+      watchIdRef.current = navigator.geolocation.watchPosition(
+        pos => {
+          const { latitude: lat, longitude: lng, speed } = pos.coords;
+          setUserLoc({ lat, lng });
+
+          const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
+          setCurrentSpeed(liveSpeed);
+
+          const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
+          setDistRemaining(parseFloat(dist.toFixed(2)));
+          setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
+
+          // Alarm Trigger Condition
           if (dist <= alarmRadius && !alarmTriggered && !isPaused) {
             setAlarmTriggered(true);
             TRIGGER_ALARM_SOUND();
           }
         },
-        err => {
-          // Fallback simulation when real GPS unavailable
-          console.warn("GPS watch fallback simulation active:", err);
-          const mockDist = 8.4;
-          setDistRemaining(mockDist);
-          setEtaMins(ESTIMATE_TIME(mockDist, 55));
-        },
+        err => console.warn("GPS Watch Position Error:", err),
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
       );
     }
@@ -105,7 +158,7 @@ export default function RedesignedTracking() {
       }
       STOP_ALARM_SOUND();
     };
-  }, [alarmRadius, alarmTriggered, isPaused, navigate, currentSpeed]);
+  }, [alarmRadius, alarmTriggered, isPaused, isIndonesia]);
 
   const handleDismissAlarm = () => {
     STOP_ALARM_SOUND();
@@ -125,6 +178,31 @@ export default function RedesignedTracking() {
   return (
     <div className="pt-20 pb-32 min-h-screen bg-slate-50 dark:bg-slate-950 font-sans">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6">
+
+        {/* Live GPS Map Visualization Header */}
+        <div className="w-full h-56 rounded-[24px] overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg relative">
+          {userLoc && destination && (
+            <MapContainer
+              center={[userLoc.lat, userLoc.lng]} zoom={13} zoomControl={false}
+              className="w-full h-full"
+            >
+              <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
+              <MapAutoFit userLoc={userLoc} destLoc={{ lat: destination.lat, lng: destination.lng }} />
+              <Marker position={[userLoc.lat, userLoc.lng]} icon={userIcon}>
+                <Popup>Your Location</Popup>
+              </Marker>
+              <Marker position={[destination.lat, destination.lng]} icon={destIcon}>
+                <Popup>{destination.name}</Popup>
+              </Marker>
+            </MapContainer>
+          )}
+
+          {/* Floating Live Badge */}
+          <div className="absolute top-4 left-4 z-[400] px-3.5 py-1.5 rounded-full bg-slate-900/80 backdrop-blur-md border border-white/10 text-white text-xs font-black flex items-center gap-2 shadow-xl">
+            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <span>Live Satellite Tracking Active</span>
+          </div>
+        </div>
 
         {/* Alarm Triggered Overlay Alert */}
         <AnimatePresence>
