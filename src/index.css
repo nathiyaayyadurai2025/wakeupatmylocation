@@ -1,30 +1,50 @@
-/* ── FONT ─────────────────────────────────────────────────────────────────── */
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
-/* ── DESIGN TOKENS ────────────────────────────────────────────────────────── */
+/* ── DESIGN TOKENS (SaaS Theme: Apple, Notion, Linear & Material 3 Inspired) ── */
 :root {
-  --bg-primary:   #0A0F1E;
+  --bg-primary: #F8FAFC;
+  --bg-secondary: #FFFFFF;
+  --bg-elevated: #FFFFFF;
+  
+  --primary: #2563EB;
+  --primary-gradient: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  
+  --text-primary: #0F172A;
+  --text-secondary: #64748B;
+  --text-muted: #94A3B8;
+  
+  --border-subtle: #E2E8F0;
+  --border-active: rgba(37, 99, 235, 0.4);
+  
+  --radius-card: 20px;
+  --shadow-soft: 0 10px 30px -5px rgba(37, 99, 235, 0.08), 0 4px 12px rgba(0, 0, 0, 0.03);
+  --shadow-floating: 0 20px 40px -10px rgba(15, 23, 42, 0.08);
+  --shadow-glow: 0 0 25px rgba(37, 99, 235, 0.25);
+}
+
+/* Dark mode overrides */
+.dark {
+  --bg-primary: #0A0F1E;
   --bg-secondary: #111827;
-  --bg-elevated:  #1C2537;
-
-  --accent-blue:  #3B82F6;
-  --accent-green: #10B981;
-  --accent-red:   #EF4444;
-
-  --text-primary:   #F9FAFB;
+  --bg-elevated: #1C2537;
+  
+  --text-primary: #F9FAFB;
   --text-secondary: #9CA3AF;
-  --text-muted:     #4B5563;
-
-  --border-subtle: rgba(255,255,255,0.06);
-  --border-active: rgba(59,130,246,0.4);
-
-  --shadow-card:  0 4px 24px rgba(0,0,0,0.4);
-  --shadow-sheet: 0 -8px 40px rgba(0,0,0,0.6);
-  --shadow-glow:  0 0 20px rgba(59,130,246,0.3);
+  --text-muted: #4B5563;
+  
+  --border-subtle: rgba(255, 255, 255, 0.08);
+  --border-active: rgba(59, 130, 246, 0.5);
+  
+  --shadow-soft: 0 10px 30px -5px rgba(0, 0, 0, 0.4);
+  --shadow-floating: 0 20px 40px -10px rgba(0, 0, 0, 0.6);
 }
 
 /* ── BASE RESET ───────────────────────────────────────────────────────────── */
@@ -42,7 +62,7 @@ html, body, #root {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   background-color: var(--bg-primary);
   color: var(--text-primary);
   -webkit-font-smoothing: antialiased;
@@ -51,154 +71,94 @@ body {
 }
 
 /* ── SCROLLBAR ────────────────────────────────────────────────────────────── */
-::-webkit-scrollbar        { width: 3px; height: 3px; }
-::-webkit-scrollbar-track  { background: transparent; }
-::-webkit-scrollbar-thumb  { background: rgba(59,130,246,0.25); border-radius: 99px; }
-
-/* ── INPUTS ───────────────────────────────────────────────────────────────── */
-input, textarea, select {
-  font-family: inherit;
-  color: var(--text-primary);
-  caret-color: var(--accent-blue);
-}
-input::placeholder { color: var(--text-muted); }
-
-/* ── LEAFLET MAP ──────────────────────────────────────────────────────────── */
-.leaflet-container {
-  background: #0d1117 !important;
-  font-family: 'Inter', sans-serif !important;
-}
-
-/* Dark-tinted tiles using CSS filter */
-.leaflet-tile-container img {
-  filter: brightness(0.82) contrast(1.05) saturate(0.9);
-}
-
-.leaflet-control-attribution {
-  display: none !important;
-}
-
-/* ── ANIMATIONS ───────────────────────────────────────────────────────────── */
-
-/* Leaflet pulsing user-location dot */
-@keyframes ping {
-  0%   { transform: scale(1); opacity: 0.8; }
-  75%, 100% { transform: scale(2.2); opacity: 0; }
-}
-
-@keyframes pulse-ring {
-  0%   { transform: scale(0.9); opacity: 0.7; }
-  100% { transform: scale(1.6); opacity: 0; }
-}
-
-/* Generic fade-up entry */
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(14px); }
-  to   { opacity: 1; transform: translateY(0); }
-}
-
-/* Number flash when value updates */
-@keyframes valueFlash {
-  0%   { color: #60A5FA; }
-  100% { color: var(--text-primary); }
-}
-.value-flash { animation: valueFlash 0.5s ease-out; }
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(37, 99, 235, 0.2); border-radius: 99px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(37, 99, 235, 0.4); }
 
 /* ── UTILITY CLASSES ──────────────────────────────────────────────────────── */
 
-/* Glass card — for floating overlays on the map */
+/* Glassmorphism Navbar & Floating Cards */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+}
+.dark .glass-nav {
+  background: rgba(10, 15, 30, 0.82);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 .glass-card {
-  background: rgba(10,15,30,0.88);
-  backdrop-filter: blur(12px);
-  -webkit-backdrop-filter: blur(12px);
-  border: 1px solid rgba(255,255,255,0.08);
-  box-shadow: var(--shadow-card);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-soft);
+  border-radius: var(--radius-card);
+}
+.dark .glass-card {
+  background: rgba(28, 37, 55, 0.85);
 }
 
-/* Bottom sheet shadow */
-.sheet-shadow {
-  box-shadow: var(--shadow-sheet);
+/* Saas Floating Card */
+.saas-card {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-soft);
+  transition: all 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+.saas-card:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-floating);
 }
 
-/* Drag handle */
-.drag-handle {
-  width: 40px;
-  height: 4px;
-  background: #374151;
-  border-radius: 99px;
-  margin: 10px auto 6px;
-}
-
-/* Blue glow button */
-.btn-blue {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: var(--accent-blue);
-  color: white;
+/* Gradient Button */
+.btn-primary {
+  background: var(--primary-gradient);
+  color: #FFFFFF;
   font-weight: 600;
-  border-radius: 12px;
-  transition: background 0.15s, transform 0.1s;
-  box-shadow: 0 4px 14px rgba(59,130,246,0.25);
+  border-radius: 14px;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.3);
+  transition: all 200ms ease;
 }
-.btn-blue:hover  { background: #60A5FA; }
-.btn-blue:active { transform: scale(0.97); }
-
-/* Search bar — Google Maps style */
-.search-bar {
-  position: relative;
-  height: 44px;
-  background: var(--bg-elevated);
-  border: 1px solid rgba(255,255,255,0.08);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  overflow: hidden;
-  transition: border-color 0.2s, box-shadow 0.2s;
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 20px rgba(37, 99, 235, 0.4);
 }
-.search-bar:focus-within {
-  border-color: rgba(59,130,246,0.4);
-  box-shadow: 0 0 0 3px rgba(59,130,246,0.08);
-}
-.search-bar input {
-  flex: 1;
-  background: transparent;
-  border: none;
-  outline: none;
-  font-size: 14px;
-  padding: 0;
-  height: 100%;
+.btn-primary:active {
+  transform: scale(0.98);
 }
 
-/* Card stagger animation helper */
-.card-enter {
-  animation: fadeUp 0.3s ease-out both;
+/* Leaflet Map */
+.leaflet-container {
+  background: #f1f5f9 !important;
+  font-family: 'Inter', sans-serif !important;
+}
+.dark .leaflet-container {
+  background: #0d1117 !important;
+}
+.dark .leaflet-tile-container img {
+  filter: brightness(0.82) contrast(1.05) saturate(0.9);
 }
 
-/* No scrollbar utility */
+/* Animations */
+@keyframes pulseGlow {
+  0% { transform: scale(1); opacity: 0.8; }
+  50% { transform: scale(1.15); opacity: 0.4; }
+  100% { transform: scale(1); opacity: 0.8; }
+}
+
+.pulse-glow {
+  animation: pulseGlow 2.5s infinite ease-in-out;
+}
+
 .no-scrollbar {
   scrollbar-width: none;
   -ms-overflow-style: none;
 }
-.no-scrollbar::-webkit-scrollbar { display: none; }
-
-/* ── TRACKING SCREEN SPECIFICS ────────────────────────────────────────────── */
-
-/* Pulsing dot used in user location icon */
-.user-dot-ring {
-  position: absolute;
-  inset: -6px;
-  border-radius: 50%;
-  background: rgba(59,130,246,0.25);
-  animation: pulse-ring 1.8s cubic-bezier(0,0,0.2,1) infinite;
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
-
-/* Progress bar animated fill */
-.progress-fill {
-  transition: width 1.2s cubic-bezier(0.4, 0, 0.2, 1);
-  background: linear-gradient(90deg, #3B82F6, #10B981);
-}
-
-/* Timeline horizontal connector */
-.timeline-line-passed   { background: #6B7280; }
-.timeline-line-upcoming { background: repeating-linear-gradient(90deg,#3B82F6 0px,#3B82F6 8px,transparent 8px,transparent 14px); }

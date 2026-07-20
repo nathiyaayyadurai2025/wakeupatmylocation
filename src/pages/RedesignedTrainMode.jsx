@@ -2,29 +2,28 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
-import { MapPin, Search, X, Settings2 } from 'lucide-react';
+import { MapPin, Search, X, Navigation, Clock, Sparkles, Train, ArrowRight } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
 import { useCountry } from '../context/CountryContext';
 import { useIndonesiaRail } from '../hooks/useIndonesiaRail';
 
-// ── Custom Map Icons ──────────────────────────────────────────────────────────
+// Custom Map Icons
 const userIcon = L.divIcon({
   className: '',
-  iconSize: [26, 26],
-  iconAnchor: [13, 13],
-  html: `<div style="position:relative;width:26px;height:26px;display:flex;align-items:center;justify-content:center">
-    <div style="position:absolute;inset:0;background:rgba(59,130,246,0.25);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite"></div>
-    <div style="position:absolute;inset:-5px;background:rgba(59,130,246,0.1);border-radius:50%;animation:ping 1.6s cubic-bezier(0,0,0.2,1) infinite;animation-delay:0.3s"></div>
-    <div style="position:relative;width:16px;height:16px;background:#3B82F6;border-radius:50%;border:2.5px solid white;box-shadow:0 0 14px rgba(59,130,246,0.7);z-index:1"></div>
+  iconSize: [30, 30],
+  iconAnchor: [15, 15],
+  html: `<div style="position:relative;width:30px;height:30px;display:flex;align-items:center;justify-content:center">
+    <div style="position:absolute;inset:0;background:rgba(37,99,235,0.3);border-radius:50%;animation:ping 1.8s cubic-bezier(0,0,0.2,1) infinite"></div>
+    <div style="position:relative;width:18px;height:18px;background:#2563EB;border-radius:50%;border:3px solid white;box-shadow:0 0 16px rgba(37,99,235,0.8);z-index:1"></div>
   </div>`
 });
 
 const stationIcon = L.divIcon({
   className: '',
-  iconSize: [14, 14],
-  iconAnchor: [7, 7],
-  html: `<div style="width:14px;height:14px;background:#10B981;border-radius:50%;border:2px solid white;box-shadow:0 2px 8px rgba(0,0,0,0.4)"></div>`
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+  html: `<div style="width:16px;height:16px;background:#10B981;border-radius:50%;border:2px solid white;box-shadow:0 2px 10px rgba(0,0,0,0.3)"></div>`
 });
 
 function MapAutoFit({ userLoc, stations }) {
@@ -49,12 +48,12 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 export default function RedesignedTrainMode() {
   const navigate = useNavigate();
-  const { isIndonesia, countryFlag } = useCountry();
-  const [phase, setPhase] = useState('loading'); // loading | error | ready
-  const [errorMsg, setErrorMsg] = useState('');
+  const { isIndonesia, countryFlag, countryName } = useCountry();
+  const [phase, setPhase] = useState('loading');
   const [userLoc, setUserLoc] = useState(null);
   const [stations, setStations] = useState([]);
   const [search, setSearch] = useState('');
+  const [tabFilter, setTabFilter] = useState('All');
 
   const {
     setStationQuery,
@@ -63,16 +62,11 @@ export default function RedesignedTrainMode() {
   } = useIndonesiaRail(userLoc);
 
   useEffect(() => {
-    if (search) {
-      setStationQuery(search);
-    } else {
-      setStationQuery('');
-    }
+    setStationQuery(search || '');
   }, [search, setStationQuery]);
 
   const fetchStations = useCallback(async (lat, lng, radius) => {
     if (isIndonesia) {
-      // Indonesia Mode: use local DB stations calculated with distance to user location
       const allIdStations = indonesiaStations.map(st => ({
         id: st.stationCode,
         code: st.stationCode,
@@ -117,8 +111,7 @@ export default function RedesignedTrainMode() {
 
   useEffect(() => {
     if (!navigator.geolocation) {
-      setErrorMsg('Geolocation not supported on this device.');
-      setPhase('error');
+      setPhase('ready');
       return;
     }
     navigator.geolocation.getCurrentPosition(
@@ -127,16 +120,15 @@ export default function RedesignedTrainMode() {
         setUserLoc({ lat, lng });
         fetchStations(lat, lng, 5000);
       },
-      err => {
-        // Fallback for desktop/emulator without hardware GPS
-        const fallbackLat = isIndonesia ? -6.1767 : 13.0827; // Jakarta or Chennai
+      () => {
+        const fallbackLat = isIndonesia ? -6.1767 : 13.0827;
         const fallbackLng = isIndonesia ? 106.8306 : 80.2707;
         setUserLoc({ lat: fallbackLat, lng: fallbackLng });
         fetchStations(fallbackLat, fallbackLng, 10000);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  }, [isIndonesia]);
+  }, [isIndonesia, fetchStations]);
 
   const filtered = stations.filter(s => {
     const q = search.toLowerCase();
@@ -144,82 +136,20 @@ export default function RedesignedTrainMode() {
     const codeMatch = s.code ? s.code.toLowerCase().includes(q) : false;
     const cityMatch = s.city ? s.city.toLowerCase().includes(q) : false;
     const provMatch = s.province ? s.province.toLowerCase().includes(q) : false;
+
+    if (tabFilter === 'Nearby') return (nameMatch || codeMatch || cityMatch || provMatch) && s.distance <= 15;
+    if (tabFilter === 'Popular') return (nameMatch || codeMatch || cityMatch || provMatch) && (s.distance <= 50 || s.code === 'GMR' || s.code === 'BD' || s.code === 'SLO');
     return nameMatch || codeMatch || cityMatch || provMatch;
   });
 
-  // ── LOADING SCREEN ────────────────────────────────────────────────────────
-  if (phase === 'loading') {
-    return (
-      <div className="min-h-screen bg-[#0A0F1E] flex flex-col items-center justify-center" style={{ fontFamily: "'Inter', sans-serif" }}>
-        <div className="relative w-44 h-44 flex items-center justify-center mb-8">
-          {[0, 1, 2].map(i => (
-            <m.div
-              key={i}
-              className="absolute rounded-full border border-[#3B82F6]/40"
-              style={{ inset: i * -18 - 8 }}
-              initial={{ scale: 0.5, opacity: 0.8 }}
-              animate={{ scale: 1.6, opacity: 0 }}
-              transition={{ duration: 2.2, repeat: Infinity, delay: i * 0.7, ease: 'easeOut' }}
-            />
-          ))}
-          <div className="w-16 h-16 bg-[#3B82F6] rounded-full shadow-[0_0_40px_rgba(59,130,246,0.5)] flex items-center justify-center z-10">
-            <MapPin size={28} className="text-white" />
-          </div>
-        </div>
-        <h2 className="text-white text-[18px] font-bold tracking-tight">Finding your location...</h2>
-        <p className="text-[#9CA3AF] text-sm mt-2 font-medium">Please allow location access {countryFlag}</p>
-        <div className="flex gap-1.5 mt-5">
-          {[0, 1, 2].map(i => (
-            <m.div
-              key={i} className="w-1.5 h-1.5 rounded-full bg-[#3B82F6]"
-              animate={{ opacity: [0.3, 1, 0.3] }}
-              transition={{ duration: 1.4, repeat: Infinity, delay: i * 0.22 }}
-            />
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  // ── ERROR SCREEN ──────────────────────────────────────────────────────────
-  if (phase === 'error') {
-    return (
-      <div className="min-h-screen bg-[#0A0F1E] flex items-center justify-center p-6" style={{ fontFamily: "'Inter', sans-serif" }}>
-        <m.div
-          initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-          className="bg-[#1C2537] rounded-2xl p-8 border border-white/5 shadow-[0_4px_24px_rgba(0,0,0,0.4)] max-w-sm w-full text-center"
-        >
-          <div className="w-16 h-16 bg-[#EF4444]/10 rounded-full flex items-center justify-center mx-auto mb-5 border border-[#EF4444]/20">
-            <MapPin size={30} className="text-[#EF4444]" />
-          </div>
-          <h2 className="text-[#F9FAFB] font-bold text-xl mb-2 tracking-tight">Location Denied</h2>
-          <p className="text-[#9CA3AF] text-sm leading-relaxed mb-7">{errorMsg}</p>
-          <button
-            onClick={() => {
-              const defaultLat = isIndonesia ? -6.1767 : 13.0827;
-              const defaultLng = isIndonesia ? 106.8306 : 80.2707;
-              setUserLoc({ lat: defaultLat, lng: defaultLng });
-              fetchStations(defaultLat, defaultLng, 10000);
-            }}
-            className="w-full h-12 bg-[#3B82F6] hover:bg-blue-400 active:scale-95 text-white rounded-xl font-semibold text-sm flex items-center justify-center gap-2 transition-all shadow-[0_0_20px_rgba(59,130,246,0.3)]"
-          >
-            <MapPin size={18} /> Use Default Station List
-          </button>
-        </m.div>
-      </div>
-    );
-  }
-
-  // ── MAIN STATION LIST ─────────────────────────────────────────────────────
   return (
-    <div className="h-screen flex flex-col bg-[#0A0F1E] overflow-hidden" style={{ fontFamily: "'Inter', sans-serif" }}>
-      {/* Map — 45% */}
-      <div className="flex-shrink-0" style={{ height: '45%' }}>
+    <div className="pt-16 min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans">
+      {/* Map Section (40% height) */}
+      <div className="relative w-full h-[40vh] bg-slate-200 dark:bg-slate-900 flex-shrink-0">
         {userLoc && (
           <MapContainer
             center={[userLoc.lat, userLoc.lng]} zoom={13} zoomControl={false}
             className="w-full h-full"
-            style={{ background: '#0d1117' }}
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
             <MapAutoFit userLoc={userLoc} stations={stations} />
@@ -233,141 +163,143 @@ export default function RedesignedTrainMode() {
             ))}
           </MapContainer>
         )}
-        {/* gradient fade */}
-        <div className="absolute" style={{ bottom: '55%', left: 0, right: 0, height: 48, background: 'linear-gradient(to top, #111827, transparent)', zIndex: 400 }} />
+        <div className="absolute inset-x-0 bottom-0 h-12 bg-gradient-to-t from-slate-50 dark:from-slate-950 to-transparent pointer-events-none z-[400]" />
       </div>
 
-      {/* Bottom Sheet — 55% */}
-      <m.div
-        initial={{ y: 40, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ type: 'spring', damping: 22, stiffness: 260 }}
-        className="flex flex-col bg-[#111827] rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.6)] z-10 overflow-hidden"
-        style={{ flex: 1 }}
-      >
-        {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-2 flex-shrink-0">
-          <div className="w-10 h-1 bg-[#374151] rounded-full" />
-        </div>
-
-        {/* Nearest Station Alert (if Indonesia active & detected) */}
+      {/* Main Content Sheet (60% height / scrollable) */}
+      <div className="flex-1 max-w-5xl mx-auto w-full px-4 sm:px-6 -mt-6 relative z-10 space-y-6 pb-24">
+        {/* Nearest Station Alert Card */}
         {isIndonesia && nearestStationResult && (
-          <div className="mx-5 mb-2 px-3.5 py-2.5 rounded-xl bg-gradient-to-r from-red-500/10 to-blue-500/10 border border-red-500/20 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="text-sm">📍</span>
+          <m.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="p-4 rounded-[20px] bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/20 flex items-center justify-between"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-white/15 flex items-center justify-center backdrop-blur-md">
+                <Navigation size={20} className="animate-pulse" />
+              </div>
               <div>
-                <div className="text-[10px] font-black text-red-400 uppercase tracking-wider">Nearest KAI Station</div>
-                <div className="text-xs font-bold text-white">{nearestStationResult.station.stationName} ({nearestStationResult.station.stationCode})</div>
+                <span className="text-[10px] font-black uppercase tracking-widest text-blue-200">Nearest Station Detected</span>
+                <h4 className="font-bold text-base">{nearestStationResult.station.stationName} ({nearestStationResult.station.stationCode})</h4>
               </div>
             </div>
             <div className="text-right">
-              <div className="text-xs font-black text-emerald-400">{nearestStationResult.distanceKm} km</div>
-              <div className="text-[9px] text-[#9CA3AF]">~{nearestStationResult.etaMinutes} min ETA</div>
+              <div className="text-sm font-black text-emerald-300">{nearestStationResult.distanceKm} km</div>
+              <div className="text-[10px] text-blue-200">~{nearestStationResult.etaMinutes} min ETA</div>
             </div>
-          </div>
+          </m.div>
         )}
 
-        {/* Header */}
-        <div className="px-5 pb-4 flex-shrink-0">
-          <div className="flex items-center gap-3 mb-4">
-            <h3 className="text-[#F9FAFB] font-bold text-xl tracking-tight flex items-center gap-2">
-              <span>Nearby Stations</span>
-              <span className="text-base">{countryFlag}</span>
-            </h3>
-            <div className="bg-[#1C2537] border border-white/5 px-2.5 py-1 rounded-full">
-              <span className="text-[#9CA3AF] text-xs font-bold">{filtered.length} found</span>
+        {/* Command Palette Search Header */}
+        <div className="saas-card p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight flex items-center gap-2">
+                <span>Select Boarding Station</span>
+                <span>{countryFlag}</span>
+              </h2>
+              <p className="text-slate-500 text-xs font-medium mt-0.5">Search PT KAI & Commuter stations across {countryName}</p>
             </div>
+            <span className="self-start sm:self-auto text-xs font-extrabold px-3 py-1 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+              {filtered.length} stations found
+            </span>
           </div>
 
-          {/* Search — Google Maps style */}
-          <div className="search-bar px-3.5">
-            <Search size={16} className="text-[#9CA3AF] flex-shrink-0 mr-2.5" />
+          {/* Search Input Bar */}
+          <div className="relative flex items-center">
+            <Search size={18} className="absolute left-4 text-slate-400" />
             <input
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder={isIndonesia ? "Search station name, code, city, province..." : "Search stations..."}
-              className="text-sm"
+              placeholder="Search by station name, station code, city, province..."
+              className="w-full h-12 pl-11 pr-10 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
             />
-            <AnimatePresence>
-              {search && (
-                <m.button
-                  initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }}
-                  onClick={() => setSearch('')}
-                  className="ml-2 w-5 h-5 bg-[#374151] rounded-full flex items-center justify-center flex-shrink-0"
-                >
-                  <X size={11} className="text-[#9CA3AF]" />
-                </m.button>
-              )}
-            </AnimatePresence>
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3.5 w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex items-center gap-2 pt-1 overflow-x-auto no-scrollbar">
+            {['All', 'Nearby', 'Popular'].map(tab => (
+              <button
+                key={tab}
+                onClick={() => setTabFilter(tab)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  tabFilter === tab
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                    : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                }`}
+              >
+                {tab}
+              </button>
+            ))}
           </div>
         </div>
 
-        {/* Station List */}
-        <div className="flex-1 overflow-y-auto px-5 pb-6" style={{ scrollbarWidth: 'none' }}>
+        {/* Station Cards Grid */}
+        <div className="space-y-3">
           {filtered.length === 0 ? (
-            <div className="text-center py-12 text-[#4B5563]">
-              <MapPin size={36} className="mx-auto mb-3 opacity-30" />
-              <p className="font-medium">No stations found</p>
+            <div className="saas-card p-12 text-center text-slate-400">
+              <MapPin size={40} className="mx-auto mb-3 opacity-30" />
+              <p className="font-bold">No stations found matching your search</p>
             </div>
           ) : (
-            <m.div className="space-y-3" initial="hidden" animate="visible"
-              variants={{ visible: { transition: { staggerChildren: 0.06 } } }}>
-              {filtered.map((st) => {
-                const badgeColor = st.distance < 1
-                  ? { bg: 'rgba(16,185,129,0.12)', text: '#10B981', border: 'rgba(16,185,129,0.2)' }
-                  : st.distance < 3
-                  ? { bg: 'rgba(59,130,246,0.12)', text: '#3B82F6', border: 'rgba(59,130,246,0.2)' }
-                  : { bg: 'rgba(75,85,99,0.2)', text: '#9CA3AF', border: 'rgba(75,85,99,0.3)' };
+            filtered.map((st) => (
+              <m.div
+                key={st.id}
+                whileHover={{ scale: 1.01 }}
+                className="saas-card p-5 flex items-center justify-between gap-4"
+              >
+                <div className="flex items-center gap-4 min-w-0 flex-1">
+                  {/* Distance badge */}
+                  <div className="w-14 h-14 rounded-2xl bg-blue-500/10 border border-blue-500/20 flex flex-col items-center justify-center flex-shrink-0 text-blue-600 dark:text-blue-400 font-extrabold">
+                    <span className="text-base leading-none">{st.distance.toFixed(1)}</span>
+                    <span className="text-[9px] uppercase tracking-wider font-bold">km</span>
+                  </div>
 
-                return (
-                  <m.div
-                    key={st.id}
-                    variants={{ hidden: { opacity: 0, y: 10 }, visible: { opacity: 1, y: 0 } }}
-                    className="bg-[#1C2537] border rounded-2xl p-4 flex items-center gap-3 shadow-[0_4px_24px_rgba(0,0,0,0.3)]"
-                    style={{ borderColor: 'rgba(255,255,255,0.06)' }}
-                  >
-                    {/* Distance badge */}
-                    <div className="flex-shrink-0 px-2.5 py-1.5 rounded-lg border text-center min-w-[52px]"
-                      style={{ background: badgeColor.bg, borderColor: badgeColor.border }}>
-                      <div className="text-xs font-black" style={{ color: badgeColor.text }}>{st.distance.toFixed(1)}</div>
-                      <div className="text-[9px] font-bold uppercase tracking-wide" style={{ color: badgeColor.text }}>km</div>
-                    </div>
-
-                    {/* Name */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <h4 className="text-[#F9FAFB] font-bold text-[15px] truncate">{st.name}</h4>
-                        {st.code && (
-                          <span className="text-[10px] font-black px-1.5 py-0.5 rounded bg-blue-500/20 text-blue-400 border border-blue-500/30">
-                            {st.code}
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[#4B5563] text-[10px] font-bold uppercase tracking-wider">
-                          {st.operator || 'Railway Station'}
+                  {/* Name & details */}
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-extrabold text-base text-slate-900 dark:text-white truncate">{st.name}</h4>
+                      {st.code && (
+                        <span className="text-[11px] font-black px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                          {st.code}
                         </span>
-                        {st.province && (
-                          <span className="text-[#9CA3AF] text-[10px] truncate font-medium">
-                            • {st.city}, {st.province}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </div>
+                    <div className="flex items-center gap-2 mt-1 text-xs text-slate-500 dark:text-slate-400">
+                      <span className="font-bold uppercase text-[10px] text-slate-400 tracking-wider">
+                        {st.operator || 'Railway Station'}
+                      </span>
+                      {st.province && <span>• {st.city}, {st.province}</span>}
+                    </div>
+                  </div>
+                </div>
 
-                    {/* Select button */}
-                    <m.button
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => { localStorage.setItem('boardingStation', JSON.stringify(st)); navigate('/trains'); }}
-                      className="flex-shrink-0 bg-[#3B82F6] hover:bg-blue-400 text-white text-sm font-semibold px-3.5 py-2 rounded-xl transition-colors shadow-[0_0_16px_rgba(59,130,246,0.2)]"
-                    >
-                      Select
-                    </m.button>
-                  </m.div>
-                );
-              })}
-            </m.div>
+                {/* Select Button */}
+                <m.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    localStorage.setItem('boardingStation', JSON.stringify(st));
+                    navigate('/trains');
+                  }}
+                  className="px-5 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-500/20 flex items-center gap-1.5 flex-shrink-0"
+                >
+                  <span>Select</span>
+                  <ArrowRight size={14} />
+                </m.button>
+              </m.div>
+            ))
           )}
         </div>
-      </m.div>
+      </div>
     </div>
   );
 }

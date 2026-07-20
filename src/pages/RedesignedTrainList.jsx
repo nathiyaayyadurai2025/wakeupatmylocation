@@ -1,26 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Search, X, Bell, Check } from 'lucide-react';
+import { ArrowLeft, Search, X, Bell, Check, Train, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { useCountry } from '../context/CountryContext';
 import { useIndonesiaRail } from '../hooks/useIndonesiaRail';
 import { CALCULATE_DISTANCE } from '../constants';
 
-const pageVariants = {
-  initial: { opacity: 0, y: 20 },
-  animate: { opacity: 1, y: 0, transition: { duration: 0.3, ease: 'easeOut' } },
-};
-
 export default function RedesignedTrainList() {
   const navigate = useNavigate();
-  const { isIndonesia, countryFlag } = useCountry();
+  const { isIndonesia, countryFlag, countryName } = useCountry();
   const [trains, setTrains] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [boardingStation, setBoardingStation] = useState(null);
   const [selectedTrain, setSelectedTrain] = useState(null);
 
-  const { getRoutesForStation, routes: allIdRoutes } = useIndonesiaRail();
+  const { getRoutesForStation } = useIndonesiaRail();
 
   useEffect(() => {
     const st = localStorage.getItem('boardingStation');
@@ -29,7 +24,6 @@ export default function RedesignedTrainList() {
     setBoardingStation(parsedStation);
 
     if (isIndonesia) {
-      // Indonesia mode: query local routes database for station
       const stIdentifier = parsedStation.code || parsedStation.id || parsedStation.name;
       const matchedRoutes = getRoutesForStation(stIdentifier);
 
@@ -50,182 +44,172 @@ export default function RedesignedTrainList() {
     } else {
       fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
     }
-  }, [navigate, isIndonesia]);
+  }, [navigate, isIndonesia, getRoutesForStation]);
 
   const filters = isIndonesia ? ['All', 'Antarkota', 'Commuter Line', 'Bandara'] : ['All', 'Express', 'Mail', 'Passenger'];
 
   const filtered = trains.filter(t => {
-    // 1. Station-Strict Filtering: must stop at or pass through boardingStation
     if (boardingStation && t.stops && t.stops.length > 0) {
       const stopsAtBoarding = t.stops.some(stop => {
         const stopName = (stop.name || '').toLowerCase();
         const boardName = (boardingStation.name || '').toLowerCase();
-        
-        // Clean prefixes for robust comparison
         const clean = (s) => s.replace(/stasiun|station|junction|jn|\s/g, '');
         const nameMatch = clean(stopName).includes(clean(boardName)) || clean(boardName).includes(clean(stopName));
         
-        // Distance match fallback (< 2.5km)
         let distMatch = false;
         if (stop.lat && stop.lng && boardingStation.lat && boardingStation.lng) {
           distMatch = CALCULATE_DISTANCE(stop.lat, stop.lng, boardingStation.lat, boardingStation.lng) <= 2.5;
         }
-
         return nameMatch || distMatch;
       });
 
       if (!stopsAtBoarding) return false;
     }
 
-    // 2. Search & Category Filters
     const matchSearch = t.trainName.toLowerCase().includes(search.toLowerCase()) || t.trainNumber.toLowerCase().includes(search.toLowerCase());
     const matchFilter = filter === 'All' || (t.category && t.category.toLowerCase() === filter.toLowerCase()) || t.trainName.toLowerCase().includes(filter.toLowerCase());
     return matchSearch && matchFilter;
   });
 
   return (
-    <m.div variants={pageVariants} initial="initial" animate="animate"
-      className="min-h-screen bg-[#0A0F1E] flex flex-col" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="pt-20 pb-24 min-h-screen bg-slate-50 dark:bg-slate-950 font-sans">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
 
-      {/* ── HEADER ── */}
-      <div className="bg-[#0A0F1E] px-5 pt-16 pb-4 sticky top-0 z-20" style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-        <div className="flex items-center justify-between mb-5">
-          <m.button
-            whileTap={{ scale: 0.9 }}
-            onClick={() => navigate('/train')}
-            className="w-10 h-10 rounded-full bg-[#1C2537] border border-white/5 flex items-center justify-center text-[#F9FAFB] active:scale-90 transition-transform"
-          >
-            <ArrowLeft size={18} />
-          </m.button>
-          <div className="text-center">
-            <h2 className="text-[#F9FAFB] font-bold text-lg tracking-tight flex items-center justify-center gap-1.5">
-              <span>{boardingStation?.name || 'Station'}</span>
-              <span>{countryFlag}</span>
-            </h2>
-            {boardingStation?.code && (
-              <span className="text-[10px] text-blue-400 font-mono font-bold">{boardingStation.code} • {boardingStation.operator || 'KAI'}</span>
-            )}
-          </div>
-          <div className="bg-[#1C2537] border border-white/5 px-3 py-1 rounded-full">
-            <span className="text-[#9CA3AF] text-xs font-bold">{filtered.length} trains</span>
-          </div>
-        </div>
-
-        {/* Search — Google Maps style */}
-        <div className="search-bar px-3.5 mb-4">
-          <Search size={16} className="text-[#9CA3AF] flex-shrink-0 mr-2.5" />
-          <input
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            placeholder="Search trains by name or number..."
-            className="flex-1 text-sm bg-transparent border-none outline-none h-full"
-            style={{ color: '#F9FAFB' }}
-          />
-          <AnimatePresence>
-            {search && (
-              <m.button
-                initial={{ opacity: 0, scale: 0.7 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.7 }}
-                onClick={() => setSearch('')}
-                className="ml-2 w-5 h-5 bg-[#374151] rounded-full flex items-center justify-center flex-shrink-0"
-              >
-                <X size={11} className="text-[#9CA3AF]" />
-              </m.button>
-            )}
-          </AnimatePresence>
-        </div>
-
-        {/* Filter Chips */}
-        <div className="flex gap-2 overflow-x-auto pb-1" style={{ scrollbarWidth: 'none' }}>
-          {filters.map(f => (
+        {/* Top Header Card */}
+        <div className="saas-card p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
             <m.button
-              key={f} whileTap={{ scale: 0.95 }}
-              onClick={() => setFilter(f)}
-              className="px-4 py-1.5 rounded-full text-xs font-bold whitespace-nowrap transition-all"
-              style={{
-                background: filter === f ? '#3B82F6' : 'rgba(28,37,55,1)',
-                color: filter === f ? 'white' : '#9CA3AF',
-                border: `1px solid ${filter === f ? 'rgba(59,130,246,0.4)' : 'rgba(255,255,255,0.06)'}`,
-              }}
+              whileTap={{ scale: 0.9 }}
+              onClick={() => navigate('/train')}
+              className="w-10 h-10 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex items-center justify-center text-slate-700 dark:text-slate-200 hover:bg-slate-200"
             >
-              {f}
+              <ArrowLeft size={18} />
             </m.button>
-          ))}
-        </div>
-      </div>
-
-      {/* ── TRAIN CARDS ── */}
-      <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3" style={{ scrollbarWidth: 'none' }}>
-        {filtered.length === 0 && (
-          <div className="text-center py-16 text-[#4B5563]">
-            <div className="text-4xl mb-3">🚆</div>
-            <p className="font-medium">No trains available for {boardingStation?.name || 'this station'}</p>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-black uppercase tracking-widest text-blue-600 dark:text-blue-400">Boarding Station</span>
+                <span>{countryFlag}</span>
+              </div>
+              <h2 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+                {boardingStation?.name || 'Station'}
+              </h2>
+            </div>
           </div>
-        )}
 
-        <m.div initial="hidden" animate="visible" variants={{ visible: { transition: { staggerChildren: 0.07 } } }}>
-          {filtered.map(t => (
-            <m.div
-              key={t.trainNumber}
-              variants={{ hidden: { opacity: 0, y: 16 }, visible: { opacity: 1, y: 0 } }}
-              className="bg-[#1C2537] rounded-2xl p-5 mb-3 shadow-[0_4px_24px_rgba(0,0,0,0.35)]"
-              style={{ border: '1px solid rgba(255,255,255,0.05)' }}
-            >
-              {/* Top row */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-2.5 flex-1 min-w-0 mr-3">
-                  <span
-                    className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
-                    style={{ background: 'rgba(59,130,246,0.12)', color: '#93C5FD', border: '1px solid rgba(59,130,246,0.2)' }}
-                  >
-                    {t.trainNumber}
-                  </span>
-                  <div>
-                    <h3 className="text-[#F9FAFB] font-bold text-[15px] tracking-tight truncate">{t.trainName}</h3>
-                    {t.category && (
-                      <span className="text-[9px] font-black uppercase tracking-wider text-emerald-400">
-                        {t.category}
-                      </span>
-                    )}
+          <div className="px-4 py-1.5 rounded-full bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-bold self-start sm:self-auto">
+            {filtered.length} Trains Available
+          </div>
+        </div>
+
+        {/* Command Palette Train Search Bar */}
+        <div className="saas-card p-6 space-y-4">
+          <div className="relative flex items-center">
+            <Search size={18} className="absolute left-4 text-slate-400" />
+            <input
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              placeholder="Search train by name or number (e.g., CL-4101, Argo Parahyangan)..."
+              className="w-full h-12 pl-11 pr-10 rounded-2xl bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white text-sm font-medium focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 transition-all"
+            />
+            {search && (
+              <button
+                onClick={() => setSearch('')}
+                className="absolute right-3.5 w-6 h-6 rounded-full bg-slate-200 dark:bg-slate-800 flex items-center justify-center text-slate-500"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+
+          {/* Filter Chips */}
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
+            {filters.map(f => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  filter === f
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/30'
+                    : 'bg-slate-100 dark:bg-slate-900 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
+                }`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Train List Cards */}
+        <div className="space-y-4">
+          {filtered.length === 0 ? (
+            <div className="saas-card p-12 text-center text-slate-400">
+              <Train size={44} className="mx-auto mb-3 opacity-30" />
+              <p className="font-bold">No trains available for {boardingStation?.name || 'this station'}</p>
+            </div>
+          ) : (
+            filtered.map(t => (
+              <m.div
+                key={t.trainNumber}
+                whileHover={{ y: -2 }}
+                className="saas-card p-6 space-y-4"
+              >
+                {/* Top Row Header */}
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20 text-xs font-black">
+                      {t.trainNumber}
+                    </span>
+                    <div>
+                      <h3 className="font-extrabold text-lg text-slate-900 dark:text-white">{t.trainName}</h3>
+                      {t.category && (
+                        <span className="text-[10px] font-black uppercase tracking-wider text-emerald-500">
+                          {t.category}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="text-right">
+                    <div className="text-slate-900 dark:text-white font-extrabold text-base">{t.stops[0]?.arrival}</div>
+                    <div className="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Departure</div>
                   </div>
                 </div>
-                <div className="text-right flex-shrink-0">
-                  <div className="text-[#F9FAFB] font-bold text-[15px]">{t.stops[0]?.arrival}</div>
-                  <div className="text-[#4B5563] text-[9px] font-bold uppercase tracking-wider">Dep.</div>
-                </div>
-              </div>
 
-              {/* Route viz */}
-              <div className="flex items-center px-1 mb-5">
-                <div className="flex flex-col items-start mr-3 max-w-[80px]">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#10B981] mb-1.5" />
-                  <span className="text-[#9CA3AF] text-[10px] leading-tight">{t.stops[0]?.name}</span>
-                </div>
-                <div className="flex-1 h-[2px] mx-1 relative">
-                  <div className="absolute inset-0 bg-[#374151] rounded-full" />
-                  <div className="absolute left-0 top-0 h-full w-1/3 bg-[#3B82F6] rounded-full" />
-                  {/* train dot */}
-                  <div className="absolute top-1/2 left-1/3 -translate-y-1/2 -translate-x-1/2 w-2 h-2 bg-[#3B82F6] rounded-full shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
-                </div>
-                <div className="flex flex-col items-end ml-3 max-w-[80px]">
-                  <div className="w-2.5 h-2.5 rounded-full bg-[#EF4444] mb-1.5" />
-                  <span className="text-[#9CA3AF] text-[10px] leading-tight text-right">{t.stops[t.stops.length - 1]?.name}</span>
-                </div>
-              </div>
+                {/* Route Visualization */}
+                <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-100/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t.stops[0]?.name}</span>
+                  </div>
 
-              {/* CTA button */}
-              <m.button
-                whileTap={{ scale: 0.97 }}
-                onClick={() => setSelectedTrain(t)}
-                className="w-full h-11 bg-[#3B82F6] hover:bg-blue-400 text-white font-semibold rounded-xl text-sm transition-colors shadow-[0_4px_14px_rgba(59,130,246,0.25)] active:scale-95"
-              >
-                Set Alarm
-              </m.button>
-            </m.div>
-          ))}
-        </m.div>
+                  <div className="flex items-center gap-2 px-3 text-slate-400 text-xs font-medium">
+                    <div className="h-[2px] w-12 bg-slate-300 dark:bg-slate-700" />
+                    <span>{t.stops.length} Stops</span>
+                    <div className="h-[2px] w-12 bg-slate-300 dark:bg-slate-700" />
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                    <span className="text-xs font-bold text-slate-700 dark:text-slate-300">{t.stops[t.stops.length - 1]?.name}</span>
+                  </div>
+                </div>
+
+                {/* CTA Button */}
+                <m.button
+                  whileTap={{ scale: 0.97 }}
+                  onClick={() => setSelectedTrain(t)}
+                  className="w-full h-12 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm shadow-md shadow-blue-500/20 flex items-center justify-center gap-2 transition-all"
+                >
+                  <Bell size={16} />
+                  <span>Select Destination & Set Alarm</span>
+                </m.button>
+              </m.div>
+            ))
+          )}
+        </div>
       </div>
 
-      {/* ── STOP PICKER BOTTOM SHEET ── */}
+      {/* Stop Picker Sheet Component */}
       <AnimatePresence>
         {selectedTrain && (
           <StopPickerSheet
@@ -235,11 +219,11 @@ export default function RedesignedTrainList() {
           />
         )}
       </AnimatePresence>
-    </m.div>
+    </div>
   );
 }
 
-// ── Stop Picker Sheet Component ────────────────────────────────────────────────
+// Timeline UI Stop Picker Sheet
 function StopPickerSheet({ train, boardingStation, onClose }) {
   const navigate = useNavigate();
   const [selectedDest, setSelectedDest] = useState(null);
@@ -263,52 +247,42 @@ function StopPickerSheet({ train, boardingStation, onClose }) {
 
   return (
     <>
-      {/* Backdrop */}
       <m.div
         initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
         onClick={onClose}
-        className="fixed inset-0 z-40"
-        style={{ background: 'rgba(10,15,30,0.8)', backdropFilter: 'blur(4px)' }}
+        className="fixed inset-0 z-[5000] bg-slate-950/70 backdrop-blur-md"
       />
 
-      {/* Sheet */}
       <m.div
         initial={{ y: '100%' }} animate={{ y: 0 }} exit={{ y: '100%' }}
         transition={{ type: 'spring', damping: 26, stiffness: 300 }}
-        className="fixed bottom-0 left-0 right-0 z-50 flex flex-col bg-[#111827] rounded-t-3xl shadow-[0_-8px_40px_rgba(0,0,0,0.65)]"
-        style={{ height: '75vh', fontFamily: "'Inter', sans-serif" }}
+        className="fixed bottom-0 left-0 right-0 z-[5001] max-w-2xl mx-auto bg-white dark:bg-slate-900 rounded-t-[32px] shadow-2xl flex flex-col"
+        style={{ height: '75vh' }}
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-1 flex-shrink-0">
-          <div className="w-10 h-1 bg-[#374151] rounded-full" />
+        <div className="flex justify-center pt-3 pb-1">
+          <div className="w-12 h-1.5 bg-slate-300 dark:bg-slate-800 rounded-full" />
         </div>
 
         {/* Sheet Header */}
-        <div className="px-5 py-4 flex items-start justify-between flex-shrink-0" style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+        <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-0.5">
-              <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg"
-                style={{ background: 'rgba(59,130,246,0.12)', color: '#93C5FD', border: '1px solid rgba(59,130,246,0.2)' }}>
-                {train.trainNumber}
-              </span>
-            </div>
-            <h3 className="text-[#F9FAFB] font-bold text-[18px] tracking-tight">{train.trainName}</h3>
-            <p className="text-[#9CA3AF] text-xs mt-0.5">Select your destination stop</p>
+            <span className="text-[10px] font-black px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+              {train.trainNumber}
+            </span>
+            <h3 className="font-extrabold text-xl text-slate-900 dark:text-white mt-1">{train.trainName}</h3>
+            <p className="text-slate-500 text-xs">Tap a station to set as your alarm destination stop</p>
           </div>
-          <m.button
-            whileTap={{ scale: 0.9 }}
+          <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full bg-[#374151] flex items-center justify-center text-[#9CA3AF] hover:text-white transition-colors"
+            className="w-8 h-8 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-500"
           >
             <X size={16} />
-          </m.button>
+          </button>
         </div>
 
-        {/* Stop list */}
-        <div className="flex-1 overflow-y-auto px-5 py-3 relative" style={{ scrollbarWidth: 'none' }}>
-          {/* Vertical connector line */}
-          <div className="absolute left-[38px] top-3 bottom-3 w-px bg-[#1C2537]" />
-
+        {/* Timeline UI Station List */}
+        <div className="flex-1 overflow-y-auto px-6 py-4 relative space-y-2">
           {stops.map((stop, idx) => {
             const isSelected = selectedDest?.name === stop.name;
             return (
@@ -316,56 +290,44 @@ function StopPickerSheet({ train, boardingStation, onClose }) {
                 key={idx}
                 whileTap={{ scale: 0.99 }}
                 onClick={() => setSelectedDest(stop)}
-                className="w-full flex items-start gap-4 py-3.5 relative text-left rounded-xl px-2 transition-all"
-                style={{
-                  background: isSelected ? 'rgba(59,130,246,0.1)' : 'transparent',
-                  borderLeft: isSelected ? '3px solid #3B82F6' : '3px solid transparent',
-                }}
+                className={`w-full flex items-center justify-between p-4 rounded-2xl border text-left transition-all ${
+                  isSelected
+                    ? 'bg-blue-500/10 border-blue-500 text-blue-600 dark:text-blue-400 shadow-md'
+                    : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 hover:border-slate-300'
+                }`}
               >
-                {/* Circle */}
-                <div className={`w-6 h-6 rounded-full flex-shrink-0 flex items-center justify-center mt-0.5 border-2 transition-all z-10 ${
-                  isSelected ? 'bg-[#3B82F6] border-[#3B82F6]' : 'bg-[#111827] border-[#4B5563]'
-                }`}>
-                  {isSelected
-                    ? <Check size={12} className="text-white" />
-                    : <span className="text-[#9CA3AF] text-[9px] font-black">{idx + 1}</span>
-                  }
+                <div className="flex items-center gap-3">
+                  <div className={`w-7 h-7 rounded-full flex items-center justify-center font-black text-xs border ${
+                    isSelected ? 'bg-blue-600 border-blue-600 text-white' : 'bg-slate-200 dark:bg-slate-800 border-slate-300 text-slate-600 dark:text-slate-400'
+                  }`}>
+                    {isSelected ? <Check size={14} /> : idx + 1}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-sm">{stop.name}</h4>
+                    <span className="text-xs text-slate-500">Arrives {stop.arrival}</span>
+                  </div>
                 </div>
 
-                {/* Text */}
-                <div className="flex-1 min-w-0">
-                  <h4 className={`font-bold text-[14px] tracking-tight ${isSelected ? 'text-[#60A5FA]' : 'text-[#F9FAFB]'}`}>
-                    {stop.name}
-                  </h4>
-                  <p className={`text-xs mt-0.5 ${isSelected ? 'text-[#3B82F6]' : 'text-[#9CA3AF]'}`}>
-                    Arrives {stop.arrival}
-                  </p>
-                </div>
-
-                {/* Distance */}
-                <span className="text-[#4B5563] text-[11px] font-bold mt-1 flex-shrink-0">
-                  {stop.distanceFromOriginKm} km
-                </span>
+                <span className="text-xs font-extrabold text-slate-400">{stop.distanceFromOriginKm} km</span>
               </m.button>
             );
           })}
         </div>
 
-        {/* Confirm button */}
-        <div className="p-5 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+        {/* Confirm Alarm CTA */}
+        <div className="p-6 border-t border-slate-100 dark:border-slate-800">
           <m.button
             whileTap={{ scale: 0.97 }}
             onClick={handleConfirm}
             disabled={!selectedDest}
-            className="w-full h-14 rounded-xl font-bold text-[15px] flex items-center justify-center gap-2.5 transition-all"
-            style={{
-              background: selectedDest ? '#3B82F6' : '#1C2537',
-              color: selectedDest ? 'white' : '#4B5563',
-              boxShadow: selectedDest ? '0 0 20px rgba(59,130,246,0.3)' : 'none',
-            }}
+            className={`w-full h-14 rounded-2xl font-bold text-base flex items-center justify-center gap-2 transition-all ${
+              selectedDest
+                ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xl shadow-blue-500/25'
+                : 'bg-slate-100 dark:bg-slate-800 text-slate-400'
+            }`}
           >
-            <Bell size={18} style={{ opacity: selectedDest ? 1 : 0.4 }} />
-            {selectedDest ? `Set Alarm for ${selectedDest.name}` : 'Select a stop'}
+            <Bell size={18} />
+            <span>{selectedDest ? `Arm Alarm for ${selectedDest.name}` : 'Select a Stop Above'}</span>
           </m.button>
         </div>
       </m.div>

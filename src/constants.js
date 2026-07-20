@@ -760,3 +760,43 @@ export const ESTIMATE_TIME = (distance, speed = 60) => {
 export const API_BASE_URL = typeof window !== 'undefined' && window.location.hostname === 'localhost' 
   ? 'http://localhost:5500/api' 
   : '/api';
+
+let audioCtx = null;
+let alarmOscillator = null;
+
+export const TRIGGER_ALARM_SOUND = () => {
+  try {
+    if (typeof window === 'undefined') return;
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (alarmOscillator) return;
+
+    alarmOscillator = audioCtx.createOscillator();
+    const gainNode = audioCtx.createGain();
+
+    alarmOscillator.type = 'sine';
+    alarmOscillator.frequency.setValueAtTime(880, audioCtx.currentTime); // A5 note
+
+    gainNode.gain.setValueAtTime(0.5, audioCtx.currentTime);
+
+    alarmOscillator.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+
+    alarmOscillator.start();
+  } catch (err) {
+    console.warn("Audio Context playback error:", err);
+  }
+};
+
+export const STOP_ALARM_SOUND = () => {
+  try {
+    if (alarmOscillator) {
+      alarmOscillator.stop();
+      alarmOscillator.disconnect();
+      alarmOscillator = null;
+    }
+  } catch (err) {
+    console.warn("Error stopping alarm audio:", err);
+  }
+};
