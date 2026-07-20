@@ -39,6 +39,7 @@ export default function RedesignedTracking() {
   const [isPaused, setIsPaused] = useState(false);
 
   // Toggles
+  const [highVolumeEnabled, setHighVolumeEnabled] = useState(true);
   const [volume, setVolume] = useState(80);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
   const [voiceAlertEnabled, setVoiceAlertEnabled] = useState(true);
@@ -278,7 +279,12 @@ export default function RedesignedTracking() {
                 <Volume2 size={18} className="text-blue-500" />
                 <span className="text-xs font-bold text-slate-800 dark:text-slate-200">High Volume Alarm</span>
               </div>
-              <input type="checkbox" checked defaultChecked className="w-4 h-4 accent-blue-600 rounded" />
+              <input
+                type="checkbox"
+                checked={highVolumeEnabled}
+                onChange={e => setHighVolumeEnabled(e.target.checked)}
+                className="w-4 h-4 accent-blue-600 rounded"
+              />
             </div>
 
             <div className="flex items-center justify-between p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60">
