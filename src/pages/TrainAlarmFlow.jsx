@@ -426,7 +426,7 @@ export default function TrainAlarmFlow() {
   const mapCenter = userLocation ? [userLocation.lat, userLocation.lng] : [13.0827, 80.2707];
 
   return (
-    <div className="flex flex-col h-screen bg-slate-950 text-slate-100 overflow-hidden relative font-sans">
+    <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 overflow-hidden relative font-sans transition-colors duration-300">
       
       {/* Offline Banner */}
       {isOffline && (
