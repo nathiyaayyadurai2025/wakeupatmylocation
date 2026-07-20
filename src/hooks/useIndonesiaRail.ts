@@ -41,6 +41,14 @@ export const useIndonesiaRail = (userLoc?: { lat: number; lng: number } | null) 
     setSelectedStation(station);
   }, []);
 
+  const getRoutesForStation = useCallback((stationCodeOrName: string) => {
+    return indonesiaRailService.getRoutesForStation(stationCodeOrName);
+  }, []);
+
+  const getAllStations = useCallback(() => {
+    return indonesiaRailService.getAllStations();
+  }, []);
+
   return {
     stationQuery,
     setStationQuery,
@@ -51,7 +59,7 @@ export const useIndonesiaRail = (userLoc?: { lat: number; lng: number } | null) 
     selectStation,
     routes: routesForSelectedStation,
     nearestStationResult,
-    getAllStations: () => indonesiaRailService.getAllStations(),
-    getRoutesForStation: (stationCodeOrName: string) => indonesiaRailService.getRoutesForStation(stationCodeOrName),
+    getAllStations,
+    getRoutesForStation,
   };
 };

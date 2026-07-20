@@ -3,19 +3,17 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, X, Bell, Check, Train, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { useCountry } from '../context/CountryContext';
-import { useIndonesiaRail } from '../hooks/useIndonesiaRail';
+import indonesiaRailService from '../services/IndonesiaRailService';
 import { CALCULATE_DISTANCE } from '../constants';
 
 export default function RedesignedTrainList() {
   const navigate = useNavigate();
-  const { isIndonesia, countryFlag, countryName } = useCountry();
+  const { isIndonesia, countryFlag } = useCountry();
   const [trains, setTrains] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [boardingStation, setBoardingStation] = useState(null);
   const [selectedTrain, setSelectedTrain] = useState(null);
-
-  const { getRoutesForStation } = useIndonesiaRail();
 
   useEffect(() => {
     const st = localStorage.getItem('boardingStation');
@@ -24,27 +22,29 @@ export default function RedesignedTrainList() {
     setBoardingStation(parsedStation);
 
     if (isIndonesia) {
-      const stIdentifier = parsedStation.code || parsedStation.id || parsedStation.name;
-      const matchedRoutes = getRoutesForStation(stIdentifier);
+      indonesiaRailService.loadData().then(() => {
+        const stIdentifier = parsedStation.code || parsedStation.id || parsedStation.name;
+        const matchedRoutes = indonesiaRailService.getRoutesForStation(stIdentifier);
 
-      const formatted = matchedRoutes.map(r => ({
-        trainNumber: r.trainNumber,
-        trainName: r.trainName,
-        category: r.category,
-        stops: r.stops.map(s => ({
-          name: s.stationName,
-          lat: s.latitude,
-          lng: s.longitude,
-          arrival: s.arrival,
-          distanceFromOriginKm: s.distanceFromOriginKm
-        }))
-      }));
+        const formatted = matchedRoutes.map(r => ({
+          trainNumber: r.trainNumber,
+          trainName: r.trainName,
+          category: r.category,
+          stops: r.stops.map(s => ({
+            name: s.stationName,
+            lat: s.latitude,
+            lng: s.longitude,
+            arrival: s.arrival,
+            distanceFromOriginKm: s.distanceFromOriginKm
+          }))
+        }));
 
-      setTrains(formatted);
+        setTrains(formatted);
+      });
     } else {
       fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
     }
-  }, [navigate, isIndonesia, getRoutesForStation]);
+  }, [navigate, isIndonesia]);
 
   const filters = isIndonesia ? ['All', 'Antarkota', 'Commuter Line', 'Bandara'] : ['All', 'Express', 'Mail', 'Passenger'];
 
