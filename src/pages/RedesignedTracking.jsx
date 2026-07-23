@@ -176,8 +176,8 @@ export default function RedesignedTracking() {
   const progressPercent = distRemaining !== null ? Math.max(5, Math.min(100, (1 - distRemaining / 30) * 100)) : 75;
 
   return (
-    <div className="pt-20 pb-32 min-h-screen bg-slate-50 dark:bg-slate-950 font-sans">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 space-y-6">
+    <div className="pt-20 pb-32 min-h-screen bg-slate-50 dark:bg-slate-950 font-sans max-w-md mx-auto border-x border-slate-200 dark:border-slate-800">
+      <div className="px-4 space-y-6">
 
         {/* Live GPS Map Visualization Header */}
         <div className="w-full h-56 rounded-[24px] overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg relative">
