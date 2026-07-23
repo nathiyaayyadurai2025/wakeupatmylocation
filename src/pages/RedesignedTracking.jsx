@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import {
@@ -58,6 +58,7 @@ export default function RedesignedTracking() {
   const { isIndonesia, countryFlag } = useCountry();
 
   const [destination, setDestination] = useState(null);
+  const [boardingStation, setBoardingStation] = useState(null);
   const [userLoc, setUserLoc] = useState(null);
   const [distRemaining, setDistRemaining] = useState(8.4);
   const [etaMins, setEtaMins] = useState(12);
@@ -73,6 +74,16 @@ export default function RedesignedTracking() {
   const watchIdRef = useRef(null);
 
   useEffect(() => {
+    // Load boarding station if present
+    const boardingStStr = localStorage.getItem('boardingStation');
+    if (boardingStStr) {
+      try {
+        setBoardingStation(JSON.parse(boardingStStr));
+      } catch (e) {
+        console.warn(e);
+      }
+    }
+
     // 1. Load or fallback destination
     let destName = localStorage.getItem('destinationName');
     let destLat = parseFloat(localStorage.getItem('destinationLat'));
@@ -194,6 +205,23 @@ export default function RedesignedTracking() {
               <Marker position={[destination.lat, destination.lng]} icon={destIcon}>
                 <Popup>{destination.name}</Popup>
               </Marker>
+
+              {/* Traversed Path: Solid Blue */}
+              {boardingStation && boardingStation.lat && boardingStation.lng && (
+                <Polyline
+                  positions={[[boardingStation.lat, boardingStation.lng], [userLoc.lat, userLoc.lng]]}
+                  color="#2563EB"
+                  weight={4}
+                />
+              )}
+
+              {/* Remaining Path: Dotted Blue */}
+              <Polyline
+                positions={[[userLoc.lat, userLoc.lng], [destination.lat, destination.lng]]}
+                color="#2563EB"
+                weight={4}
+                dashArray="5, 8"
+              />
             </MapContainer>
           )}
 
