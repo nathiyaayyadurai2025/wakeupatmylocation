@@ -15,7 +15,6 @@ import StepHeader from './components/StepHeader';
 
 import { CountryProvider } from './context/CountryContext';
 
-import Navbar from './components/Navbar';
 import MobileBottomNav from './components/MobileBottomNav';
 
 function App() {
@@ -23,7 +22,6 @@ function App() {
     <CountryProvider>
       <BrowserRouter>
         <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
-          <Navbar />
           <StepHeader />
           
           <main className="flex-1">
