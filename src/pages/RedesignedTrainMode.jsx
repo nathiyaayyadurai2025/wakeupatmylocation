@@ -180,7 +180,7 @@ export default function RedesignedTrainMode() {
       </div>
 
       {/* Booking Station Selector Panel */}
-      <div className="flex-1 px-4 -mt-4 relative z-10 space-y-4 pb-20">
+      <div className="flex-1 px-4 -mt-4 relative z-[1000] space-y-4 pb-20">
         
         {/* Command Toggle Selector */}
         <div className="saas-card p-4 space-y-4 shadow-xl">
