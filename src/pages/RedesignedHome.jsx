@@ -148,7 +148,7 @@ export default function RedesignedHome() {
           <div className="relative space-y-3">
             {/* FROM Station */}
             <div
-              onClick={() => navigate('/train')}
+              onClick={() => navigate('/train', { state: { selectType: 'FROM' } })}
               className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 cursor-pointer flex items-center gap-3 hover:bg-slate-100/50"
             >
               <MapPin className="text-emerald-500 flex-shrink-0" size={18} />
@@ -177,7 +177,7 @@ export default function RedesignedHome() {
 
             {/* TO Station */}
             <div
-              onClick={() => navigate('/train')}
+              onClick={() => navigate('/train', { state: { selectType: 'TO' } })}
               className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700/60 cursor-pointer flex items-center gap-3 hover:bg-slate-100/50"
             >
               <MapPin className="text-rose-500 flex-shrink-0" size={18} />

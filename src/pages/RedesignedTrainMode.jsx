@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { MapPin, Search, X, Navigation, Check, Train, ArrowLeft, ArrowRight, History } from 'lucide-react';
@@ -47,11 +47,12 @@ function haversine(lat1, lon1, lat2, lon2) {
 
 export default function RedesignedTrainMode() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { isIndonesia, countryFlag, countryName } = useCountry();
   const [userLoc, setUserLoc] = useState(null);
   const [stations, setStations] = useState([]);
   const [search, setSearch] = useState('');
-  const [selectType, setSelectType] = useState('FROM'); // FROM or TO station selector
+  const [selectType, setSelectType] = useState(location.state?.selectType || 'FROM'); // FROM or TO station selector
   const [filterType, setFilterType] = useState('All'); // All, Nearby, Popular, Recent
 
   const {
