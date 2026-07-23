@@ -4,7 +4,7 @@ import { ArrowLeft, Search, X, Bell, Check, Train, Clock, MapPin, ArrowRight } f
 import { motion as m, AnimatePresence } from 'framer-motion';
 import { useCountry } from '../context/CountryContext';
 import indonesiaRailService from '../services/IndonesiaRailService';
-import { CALCULATE_DISTANCE } from '../constants';
+import { CALCULATE_DISTANCE, TRIGGER_ALARM_SOUND, STOP_ALARM_SOUND } from '../constants';
 
 export default function RedesignedTrainList() {
   const navigate = useNavigate();
@@ -225,6 +225,15 @@ function StopPickerSheet({ train, boardingStation, onClose }) {
 
   const handleConfirm = () => {
     if (!selectedDest) return;
+    try {
+      TRIGGER_ALARM_SOUND();
+      setTimeout(() => {
+        STOP_ALARM_SOUND();
+      }, 50);
+    } catch (e) {
+      console.warn(e);
+    }
+
     localStorage.setItem('destinationName', selectedDest.name);
     localStorage.setItem('destinationLat', selectedDest.lat.toString());
     localStorage.setItem('destinationLng', selectedDest.lng.toString());

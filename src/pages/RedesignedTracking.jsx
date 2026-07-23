@@ -378,6 +378,26 @@ export default function RedesignedTracking() {
               />
             </div>
           </div>
+
+          {/* Test Sound Button to unlock Web Audio context on iOS/Chrome */}
+          <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+            <button
+              onClick={() => {
+                try {
+                  TRIGGER_ALARM_SOUND();
+                  setTimeout(() => {
+                    STOP_ALARM_SOUND();
+                  }, 1200);
+                } catch (e) {
+                  console.warn(e);
+                }
+              }}
+              className="w-full py-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 border border-orange-500/20 text-xs font-black transition-all flex items-center justify-center gap-1.5"
+            >
+              <Volume2 size={14} />
+              <span>Test Alarm Tone (Unlocks Speaker)</span>
+            </button>
+          </div>
         </div>
 
         {/* Emergency Stop & Sticky Bottom Control Buttons */}

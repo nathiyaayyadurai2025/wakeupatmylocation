@@ -21,6 +21,7 @@ import {
   Share2
 } from 'lucide-react';
 import { useCountry } from '../context/CountryContext';
+import { TRIGGER_ALARM_SOUND, STOP_ALARM_SOUND } from '../constants';
 
 export default function RedesignedHome() {
   const navigate = useNavigate();
@@ -220,15 +221,50 @@ export default function RedesignedHome() {
             ))}
           </div>
 
-          {/* Primary Action Button */}
-          <m.button
-            whileTap={{ scale: 0.98 }}
-            onClick={handleSearchTrains}
-            className="w-full h-13 rounded-2xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-extrabold text-sm shadow-lg shadow-orange-500/25 flex items-center justify-center gap-2"
-          >
-            <Search size={16} />
-            <span>Search Trains & Set Alarm</span>
-          </m.button>
+          {/* Primary Action Buttons */}
+          <div className="flex flex-col gap-2">
+            {toStation && (
+              <m.button
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  try {
+                    TRIGGER_ALARM_SOUND();
+                    setTimeout(() => {
+                      STOP_ALARM_SOUND();
+                    }, 50);
+                  } catch (e) {
+                    console.warn(e);
+                  }
+
+                  localStorage.setItem('destinationName', toStation.name);
+                  localStorage.setItem('destinationLat', toStation.lat ? toStation.lat.toString() : (isIndonesia ? '-6.5962' : '9.9252'));
+                  localStorage.setItem('destinationLng', toStation.lng ? toStation.lng.toString() : (isIndonesia ? '106.7907' : '78.1198'));
+                  localStorage.setItem('trainName', travelMode + ' Journey');
+                  localStorage.setItem('trainNumber', 'GPS-ALARM');
+                  localStorage.setItem('alarmTriggered', 'false');
+
+                  navigate('/tracking');
+                }}
+                className="w-full h-13 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2"
+              >
+                <Bell size={16} />
+                <span>Set Alarm & Start Journey</span>
+              </m.button>
+            )}
+
+            <m.button
+              whileTap={{ scale: 0.98 }}
+              onClick={handleSearchTrains}
+              className={`w-full h-13 rounded-2xl font-extrabold text-sm flex items-center justify-center gap-2 transition-all ${
+                toStation
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-800 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:bg-slate-200'
+                  : 'bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-lg shadow-orange-500/25 hover:from-orange-600 hover:to-amber-600'
+              }`}
+            >
+              <Search size={16} />
+              <span>Search Trains</span>
+            </m.button>
+          </div>
         </div>
       </div>
 
