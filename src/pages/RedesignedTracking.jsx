@@ -121,51 +121,68 @@ export default function RedesignedTracking() {
     setDistRemaining(parseFloat(initialDist.toFixed(2)));
     setEtaMins(ESTIMATE_TIME(initialDist, 55));
 
-    // 2. Request GPS position
+    const updateLocation = (lat, lng, speed) => {
+      setUserLoc({ lat, lng });
+      const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
+      setCurrentSpeed(liveSpeed);
+
+      const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
+      setDistRemaining(parseFloat(dist.toFixed(2)));
+      setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
+
+      // Alarm Trigger Condition
+      if (dist <= alarmRadius && !alarmTriggered && !isPaused) {
+        setAlarmTriggered(true);
+        TRIGGER_ALARM_SOUND();
+      }
+    };
+
+    // 2. Request GPS position (resilient setup)
+    let intervalId = null;
+
     if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          const { latitude: lat, longitude: lng, speed } = pos.coords;
-          setUserLoc({ lat, lng });
+      const optionsHigh = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
+      const optionsLow = { enableHighAccuracy: false, timeout: 8000, maximumAge: 3000 };
 
-          const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
-          setCurrentSpeed(liveSpeed);
+      const getFix = (options) => {
+        navigator.geolocation.getCurrentPosition(
+          pos => updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.speed),
+          err => {
+            console.warn("GPS Resilient Fix Error:", err);
+            // If high accuracy fails, fallback to low accuracy
+            if (options === optionsHigh) {
+              getFix(optionsLow);
+            }
+          },
+          options
+        );
+      };
 
-          const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
-          setDistRemaining(parseFloat(dist.toFixed(2)));
-          setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
-        },
-        err => console.warn("GPS Initial Position Error:", err),
-        { enableHighAccuracy: true, timeout: 10000 }
-      );
+      // Get initial fix immediately
+      getFix(optionsHigh);
 
-      // Continuous Watch Position
+      // Start continuous watch
       watchIdRef.current = navigator.geolocation.watchPosition(
-        pos => {
-          const { latitude: lat, longitude: lng, speed } = pos.coords;
-          setUserLoc({ lat, lng });
-
-          const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
-          setCurrentSpeed(liveSpeed);
-
-          const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
-          setDistRemaining(parseFloat(dist.toFixed(2)));
-          setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
-
-          // Alarm Trigger Condition
-          if (dist <= alarmRadius && !alarmTriggered && !isPaused) {
-            setAlarmTriggered(true);
-            TRIGGER_ALARM_SOUND();
-          }
+        pos => updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.speed),
+        err => {
+          console.warn("GPS Watch Error, falling back to interval:", err);
+          getFix(optionsLow);
         },
-        err => console.warn("GPS Watch Position Error:", err),
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+        optionsHigh
       );
+
+      // Robust Interval Polling Fallback (ensures screen-off & browser background compatibility)
+      intervalId = setInterval(() => {
+        getFix(optionsHigh);
+      }, 4000);
     }
 
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
+      }
+      if (intervalId !== null) {
+        clearInterval(intervalId);
       }
       STOP_ALARM_SOUND();
     };
