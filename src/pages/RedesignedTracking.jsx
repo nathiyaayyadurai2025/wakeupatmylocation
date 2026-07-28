@@ -68,6 +68,12 @@ export default function RedesignedTracking() {
   const [alarmTriggered, setAlarmTriggered] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Sponsor Demo Simulation States
+  const [isDemoMode, setIsDemoMode] = useState(false);
+  const [simSpeed, setSimSpeed] = useState(5); // 1x, 5x, 10x
+  const [simProgress, setSimProgress] = useState(0); // 0 to 1
+  const [testAlarmActive, setTestAlarmActive] = useState(false);
+
   // Toggles
   const [highVolumeEnabled, setHighVolumeEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -234,10 +240,39 @@ export default function RedesignedTracking() {
       }
     };
 
-    // 2. Request GPS position (resilient setup)
+    // 2. Geolocation Watch or Demo Mode simulation loop
     let intervalId = null;
 
-    if (navigator.geolocation) {
+    if (isDemoMode) {
+      const startLat = destLat - 0.13;
+      const startLng = destLng - 0.04;
+      
+      let progress = 0;
+      setSimProgress(0);
+
+      intervalId = setInterval(() => {
+        if (isPaused || alarmTriggered) return;
+        
+        progress = Math.min(1, progress + 0.015 * simSpeed);
+        setSimProgress(progress);
+
+        const currentLat = startLat + (destLat - startLat) * progress;
+        const currentLng = startLng + (destLng - startLng) * progress;
+        
+        setUserLoc({ lat: currentLat, lng: currentLng });
+        
+        const dist = CALCULATE_DISTANCE(currentLat, currentLng, destLat, destLng);
+        setDistRemaining(parseFloat(dist.toFixed(2)));
+        setEtaMins(Math.max(0, Math.round((dist / (80 * simSpeed)) * 60)));
+        setCurrentSpeed(80 * simSpeed);
+
+        // Alarm Trigger Condition
+        if (dist <= alarmRadius && !alarmTriggered) {
+          setAlarmTriggered(true);
+          TRIGGER_ALARM_SOUND();
+        }
+      }, 1000);
+    } else if (navigator.geolocation) {
       const optionsHigh = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
       const optionsLow = { enableHighAccuracy: false, timeout: 10000, maximumAge: 3000 };
 
@@ -283,13 +318,14 @@ export default function RedesignedTracking() {
     return () => {
       if (watchIdRef.current !== null) {
         navigator.geolocation.clearWatch(watchIdRef.current);
+        watchIdRef.current = null;
       }
       if (intervalId !== null) {
         clearInterval(intervalId);
       }
       STOP_ALARM_SOUND();
     };
-  }, [alarmRadius, alarmTriggered, isPaused, isIndonesia]);
+  }, [alarmRadius, alarmTriggered, isPaused, isIndonesia, isDemoMode, simSpeed]);
 
   const handleDismissAlarm = () => {
     STOP_ALARM_SOUND();
@@ -340,6 +376,137 @@ export default function RedesignedTracking() {
   return (
     <div className="pt-20 pb-32 min-h-screen bg-slate-50 dark:bg-slate-950 font-sans max-w-md mx-auto border-x border-slate-200 dark:border-slate-800">
       <div className="px-4 space-y-6">
+
+        {/* Sponsor Pitch Banner & Privacy Badge */}
+        <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-600 p-4 rounded-3xl text-white shadow-xl space-y-2 relative overflow-hidden">
+          <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-2 -translate-y-2">
+            <Train size={120} />
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="text-[9px] font-black uppercase tracking-wider bg-white/25 px-2 py-0.5 rounded-full">
+              Zoho Sponsor Pitch Draft
+            </span>
+            <span className="text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
+              🔒 100% Client-Side
+            </span>
+          </div>
+          <h2 className="text-base font-extrabold tracking-tight">WakeUpMyStop — Privacy-First Commuter Alarm</h2>
+          <p className="text-[10px] text-blue-100 leading-relaxed font-medium">
+            Zero servers, zero backend database tracking. Screen Wake Lock & resilient background GPS loop ensures you wake up at your station.
+          </p>
+        </div>
+
+        {/* Sponsor Simulation Mode Control Card */}
+        <div className="saas-card p-4 space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] font-black uppercase text-slate-400">Simulation Controls</span>
+            <span className="text-[10px] font-bold text-blue-600">Pitch Simulator</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-2 p-1 rounded-xl bg-slate-100 dark:bg-slate-800">
+            <button
+              onClick={() => setIsDemoMode(false)}
+              className={`py-1.5 rounded-lg text-xs font-black transition-all ${
+                !isDemoMode ? 'bg-white dark:bg-slate-900 shadow-sm text-blue-600' : 'text-slate-500'
+              }`}
+            >
+              ⚡ Live GPS
+            </button>
+            <button
+              onClick={() => {
+                setIsDemoMode(true);
+                // Pre-populate route: Dindigul [DG] to Chennai Egmore [MS]
+                localStorage.setItem('destinationName', 'Chennai Egmore (MS)');
+                localStorage.setItem('destinationLat', '13.0826');
+                localStorage.setItem('destinationLng', '80.2707');
+                localStorage.setItem('boardingStation', JSON.stringify({
+                  id: 'dg',
+                  name: 'Dindigul Junction (DG)',
+                  lat: 10.3535,
+                  lng: 77.9842,
+                  code: 'DG'
+                }));
+                // Reload destination
+                setDestination({
+                  name: 'Chennai Egmore (MS)',
+                  lat: 13.0826,
+                  lng: 80.2707,
+                  trainName: 'Rockfort Express',
+                  trainNumber: '12654'
+                });
+                setBoardingStation({
+                  name: 'Dindigul Junction (DG)',
+                  lat: 10.3535,
+                  lng: 77.9842
+                });
+              }}
+              className={`py-1.5 rounded-lg text-xs font-black transition-all ${
+                isDemoMode ? 'bg-white dark:bg-slate-900 shadow-sm text-blue-600' : 'text-slate-500'
+              }`}
+            >
+              🎮 Sponsor Demo Mode
+            </button>
+          </div>
+
+          {isDemoMode && (
+            <div className="space-y-3 bg-slate-50 dark:bg-slate-900 p-3 rounded-2xl border border-slate-100 dark:border-slate-800">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-slate-600 dark:text-slate-400">Simulation Speed:</span>
+                <span className="font-black text-blue-600">{simSpeed}x Speed</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {[1, 5, 10].map(s => (
+                  <button
+                    key={s}
+                    onClick={() => setSimSpeed(s)}
+                    className={`py-1 rounded-lg text-xs font-extrabold border transition-all ${
+                      simSpeed === s 
+                        ? 'bg-blue-600 border-blue-600 text-white shadow-md' 
+                        : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                    }`}
+                  >
+                    {s}x
+                  </button>
+                ))}
+              </div>
+              <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                <div 
+                  className="bg-blue-600 h-full rounded-full transition-all duration-1000"
+                  style={{ width: `${simProgress * 100}%` }}
+                />
+              </div>
+              <div className="flex justify-between text-[9px] uppercase font-bold text-slate-400">
+                <span>Dindigul (DG)</span>
+                <span>Chennai Egmore (MS)</span>
+              </div>
+            </div>
+          )}
+
+          {/* Recording & Showcase Helper */}
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              onClick={() => {
+                TRIGGER_ALARM_SOUND();
+                setAlarmTriggered(true);
+              }}
+              className="py-2.5 rounded-xl border border-dashed border-red-500 bg-red-500/5 text-red-600 text-xs font-black hover:bg-red-500/10 transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>🔊 Test Alarm Now</span>
+            </button>
+            <button
+              onClick={() => {
+                STOP_ALARM_SOUND();
+                setAlarmTriggered(false);
+                if (navigator.vibrate) {
+                  navigator.vibrate(0);
+                }
+              }}
+              className="py-2.5 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-black hover:bg-slate-200 transition-all flex items-center justify-center gap-1.5"
+            >
+              <span>🔇 Stop Alarm</span>
+            </button>
+          </div>
+        </div>
 
         {/* Live GPS Map Visualization Header */}
         <div className="w-full h-56 rounded-[24px] overflow-hidden border border-slate-200 dark:border-slate-800 shadow-lg relative">
