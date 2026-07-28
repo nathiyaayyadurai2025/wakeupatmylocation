@@ -312,6 +312,12 @@ export default function RedesignedHome() {
         <HelpCircle size={16} className="text-slate-400 cursor-pointer" />
       </div>
 
+      {/* Privacy Badge */}
+      <div className="text-center py-2 text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+        <span className="w-2 h-2 rounded-full bg-emerald-500" />
+        <span>🔒 100% Private — Location processed entirely on your device.</span>
+      </div>
+
     </div>
   );
 }

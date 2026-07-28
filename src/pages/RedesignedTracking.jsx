@@ -68,6 +68,100 @@ export default function RedesignedTracking() {
   const [alarmTriggered, setAlarmTriggered] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Screen Wake Lock States & Callbacks
+  const [wakeLockActive, setWakeLockActive] = useState(false);
+  const [wakeLockSupported] = useState(typeof window !== 'undefined' && 'wakeLock' in navigator);
+  const wakeLockRef = useRef(null);
+
+  // GPS lost detection
+  const [gpsStatus, setGpsStatus] = useState('Optimal'); // Optimal, Weak, Lost
+  const lastFixTimeRef = useRef(Date.now());
+
+  // Vibration loop interval
+  const vibrateIntervalRef = useRef(null);
+
+  const requestWakeLock = useCallback(async () => {
+    if (!wakeLockSupported) return;
+    try {
+      if (wakeLockRef.current) return;
+      wakeLockRef.current = await navigator.wakeLock.request('screen');
+      setWakeLockActive(true);
+      wakeLockRef.current.addEventListener('release', () => {
+        setWakeLockActive(false);
+        wakeLockRef.current = null;
+      });
+      console.log('Screen Wake Lock acquired successfully');
+    } catch (err) {
+      console.warn(`Screen Wake Lock request failed: ${err.message}`);
+    }
+  }, [wakeLockSupported]);
+
+  const releaseWakeLock = useCallback(async () => {
+    if (wakeLockRef.current) {
+      try {
+        await wakeLockRef.current.release();
+      } catch (err) {
+        console.warn(`Screen Wake Lock release failed: ${err.message}`);
+      }
+      wakeLockRef.current = null;
+      setWakeLockActive(false);
+    }
+  }, []);
+
+  // Manage Screen Wake Lock
+  useEffect(() => {
+    if (!isPaused && !alarmTriggered) {
+      requestWakeLock();
+    } else {
+      releaseWakeLock();
+    }
+    return () => {
+      releaseWakeLock();
+    };
+  }, [isPaused, alarmTriggered, requestWakeLock, releaseWakeLock]);
+
+  // Request Wake Lock again when visibility state changes back to visible
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && !isPaused && !alarmTriggered) {
+        requestWakeLock();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [isPaused, alarmTriggered, requestWakeLock]);
+
+  // Continuous Vibration Alert Loop
+  useEffect(() => {
+    if (alarmTriggered && vibrationEnabled) {
+      if (navigator.vibrate) {
+        navigator.vibrate([500, 250, 500]);
+        vibrateIntervalRef.current = setInterval(() => {
+          navigator.vibrate([500, 250, 500]);
+        }, 1500);
+      }
+    } else {
+      if (vibrateIntervalRef.current) {
+        clearInterval(vibrateIntervalRef.current);
+        vibrateIntervalRef.current = null;
+      }
+      if (navigator.vibrate) {
+        navigator.vibrate(0);
+      }
+    }
+
+    return () => {
+      if (vibrateIntervalRef.current) {
+        clearInterval(vibrateIntervalRef.current);
+      }
+      if (navigator.vibrate) {
+        navigator.vibrate(0);
+      }
+    };
+  }, [alarmTriggered, vibrationEnabled]);
+
   // Toggles
   const [highVolumeEnabled, setHighVolumeEnabled] = useState(true);
   const [vibrationEnabled, setVibrationEnabled] = useState(true);
@@ -123,6 +217,8 @@ export default function RedesignedTracking() {
     setEtaMins(ESTIMATE_TIME(initialDist, 55));
 
     const updateLocation = (lat, lng, speed) => {
+      lastFixTimeRef.current = Date.now();
+      setGpsStatus('Optimal');
       setUserLoc({ lat, lng });
       const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
       setCurrentSpeed(liveSpeed);
@@ -142,16 +238,17 @@ export default function RedesignedTracking() {
     let intervalId = null;
 
     if (navigator.geolocation) {
-      const optionsHigh = { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 };
-      const optionsLow = { enableHighAccuracy: false, timeout: 8000, maximumAge: 3000 };
+      const optionsHigh = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+      const optionsLow = { enableHighAccuracy: false, timeout: 10000, maximumAge: 3000 };
 
       const getFix = (options) => {
         navigator.geolocation.getCurrentPosition(
           pos => updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.speed),
           err => {
             console.warn("GPS Resilient Fix Error:", err);
-            // If high accuracy fails, fallback to low accuracy
-            if (options === optionsHigh) {
+            if (err.code === 1) {
+              setGpsStatus('Lost'); // Permission Denied
+            } else if (options === optionsHigh) {
               getFix(optionsLow);
             }
           },
@@ -167,6 +264,7 @@ export default function RedesignedTracking() {
         pos => updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.speed),
         err => {
           console.warn("GPS Watch Error, falling back to interval:", err);
+          setGpsStatus('Weak');
           getFix(optionsLow);
         },
         optionsHigh
@@ -175,6 +273,10 @@ export default function RedesignedTracking() {
       // Robust Interval Polling Fallback (ensures screen-off & browser background compatibility)
       intervalId = setInterval(() => {
         getFix(optionsHigh);
+        // Detect if GPS signal is lost (no fix in 15 seconds)
+        if (Date.now() - lastFixTimeRef.current > 15000) {
+          setGpsStatus('Lost');
+        }
       }, 4000);
     }
 
@@ -254,6 +356,14 @@ export default function RedesignedTracking() {
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
             <span>Live Satellite Tracking Active</span>
           </div>
+
+          {/* GPS Lost Warning Overlay */}
+          {gpsStatus === 'Lost' && (
+            <div className="absolute bottom-4 left-4 right-4 z-[400] px-3 py-2.5 rounded-2xl bg-red-600/95 backdrop-blur-md border border-red-500 text-white text-xs font-black flex items-center gap-2 shadow-xl animate-pulse">
+              <AlertOctagon size={16} className="flex-shrink-0" />
+              <span>GPS Signal Lost! Move under clear sky.</span>
+            </div>
+          )}
         </div>
 
         {/* Alarm Triggered Overlay Alert */}
@@ -357,15 +467,27 @@ export default function RedesignedTracking() {
                 </div>
 
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
-                  <BatteryCharging size={16} className="mx-auto text-emerald-500 mb-1" />
-                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Battery</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">Optimal</span>
+                  {wakeLockActive ? (
+                    <Sparkles size={16} className="mx-auto text-emerald-500 mb-1 animate-pulse" />
+                  ) : (
+                    <Sparkles size={16} className="mx-auto text-slate-400 mb-1" />
+                  )}
+                  <span className="block text-[10px] font-bold text-slate-400 uppercase">Wake Lock</span>
+                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">
+                    {wakeLockSupported ? (wakeLockActive ? 'Active' : 'Idle') : 'N/A'}
+                  </span>
                 </div>
 
                 <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-center">
-                  <Wifi size={16} className="mx-auto text-indigo-500 mb-1" />
+                  {gpsStatus === 'Optimal' ? (
+                    <Wifi size={16} className="mx-auto text-indigo-500 mb-1" />
+                  ) : (
+                    <WifiOff size={16} className="mx-auto text-red-500 mb-1 animate-bounce" />
+                  )}
                   <span className="block text-[10px] font-bold text-slate-400 uppercase">GPS Signal</span>
-                  <span className="font-extrabold text-sm text-slate-900 dark:text-white">Strong</span>
+                  <span className={`font-extrabold text-sm ${gpsStatus === 'Lost' ? 'text-red-500 animate-pulse' : 'text-slate-900 dark:text-white'}`}>
+                    {gpsStatus}
+                  </span>
                 </div>
               </div>
             </div>
@@ -471,6 +593,12 @@ export default function RedesignedTracking() {
             <AlertOctagon size={18} />
             <span>End Journey</span>
           </m.button>
+        </div>
+
+        {/* Privacy Badge */}
+        <div className="text-center py-4 text-xs text-slate-400 dark:text-slate-500 flex items-center justify-center gap-1.5 font-medium">
+          <ShieldCheck size={14} className="text-emerald-500" />
+          <span>🔒 100% Private — Location processed entirely on your device.</span>
         </div>
 
       </div>
