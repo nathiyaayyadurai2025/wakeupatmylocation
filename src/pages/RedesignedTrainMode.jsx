@@ -83,24 +83,41 @@ export default function RedesignedTrainMode() {
       return;
     }
 
-    try {
-      const q = `[out:json];node["railway"="station"](around:${radius},${lat},${lng});out;`;
-      const res = await fetch(`https://overpass-api.de/api/interpreter?data=${encodeURIComponent(q)}`);
-      const data = await res.json();
-      if (data.elements?.length) {
-        const parsed = data.elements.map(el => ({
-          id: el.id,
-          name: el.tags?.name || 'Unnamed Station',
-          lat: el.lat, lng: el.lon,
-          distance: haversine(lat, lng, el.lat, el.lon)
-        })).sort((a, b) => a.distance - b.distance);
-        setStations(parsed);
-      } else if (radius < 10000) {
-        fetchStations(lat, lng, 10000);
-      } else {
-        setStations([]);
+    const q = `[out:json];node["railway"="station"](around:${radius},${lat},${lng});out;`;
+    const mirrors = [
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.nchc.org.tw/api/interpreter',
+      'https://z.overpass-api.de/api/interpreter'
+    ];
+
+    let success = false;
+    let data = null;
+
+    for (const mirror of mirrors) {
+      try {
+        const res = await fetch(`${mirror}?data=${encodeURIComponent(q)}`);
+        if (res.ok) {
+          data = await res.json();
+          success = true;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Overpass mirror ${mirror} failed or blocked by CORS:`, err);
       }
-    } catch {
+    }
+
+    if (success && data && data.elements?.length) {
+      const parsed = data.elements.map(el => ({
+        id: el.id,
+        name: el.tags?.name || 'Unnamed Station',
+        lat: el.lat, lng: el.lon,
+        distance: haversine(lat, lng, el.lat, el.lon)
+      })).sort((a, b) => a.distance - b.distance);
+      setStations(parsed);
+    } else if (radius < 10000) {
+      fetchStations(lat, lng, 10000);
+    } else {
       setStations([]);
     }
   }, [isIndonesia, indonesiaStations]);

@@ -219,31 +219,45 @@ export default function TrainAlarmFlow() {
   // STEP 2: FIND NEARBY RAILWAY STATIONS
   const fetchStations = async (lat, lon, radius) => {
     setStep(2);
-    try {
-      const query = `[out:json];node["railway"="station"](around:${radius},${lat},${lon});out;`;
-      const url = `https://overpass-api.de/api/interpreter?data=${encodeURIComponent(query)}`;
-      const response = await fetch(url);
-      const data = await response.json();
-      
-      if (data.elements && data.elements.length > 0) {
-        const parsedStations = data.elements.map(el => {
-          const dist = haversine(lat, lon, el.lat, el.lon);
-          return {
-            id: el.id,
-            name: el.tags.name || 'Unnamed Station',
-            lat: el.lat,
-            lng: el.lon,
-            distance: dist
-          };
-        }).sort((a, b) => a.distance - b.distance);
-        setStations(parsedStations);
-      } else if (radius === 5000) {
-        fetchStations(lat, lon, 10000); // fallback expand
-      } else {
-        setStations([]);
+    const query = `[out:json];node["railway"="station"](around:${radius},${lat},${lon});out;`;
+    const mirrors = [
+      'https://overpass.kumi.systems/api/interpreter',
+      'https://overpass-api.de/api/interpreter',
+      'https://overpass.nchc.org.tw/api/interpreter',
+      'https://z.overpass-api.de/api/interpreter'
+    ];
+
+    let success = false;
+    let data = null;
+
+    for (const mirror of mirrors) {
+      try {
+        const response = await fetch(`${mirror}?data=${encodeURIComponent(query)}`);
+        if (response.ok) {
+          data = await response.json();
+          success = true;
+          break;
+        }
+      } catch (err) {
+        console.warn(`Overpass mirror ${mirror} failed or blocked by CORS:`, err);
       }
-    } catch (err) {
-      console.error('Overpass API error:', err);
+    }
+
+    if (success && data && data.elements && data.elements.length > 0) {
+      const parsedStations = data.elements.map(el => {
+        const dist = haversine(lat, lon, el.lat, el.lon);
+        return {
+          id: el.id,
+          name: el.tags.name || 'Unnamed Station',
+          lat: el.lat,
+          lng: el.lon,
+          distance: dist
+        };
+      }).sort((a, b) => a.distance - b.distance);
+      setStations(parsedStations);
+    } else if (radius === 5000) {
+      fetchStations(lat, lon, 10000); // fallback expand
+    } else {
       setStations([]);
     }
   };
