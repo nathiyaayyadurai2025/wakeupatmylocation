@@ -136,6 +136,59 @@ export default function RedesignedTrainMode() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isIndonesia]);
 
+  // Debounced Global Station Search (India Mode)
+  useEffect(() => {
+    if (isIndonesia) return;
+    if (!search || search.trim().length < 3) return;
+
+    const delayDebounce = setTimeout(async () => {
+      const q = `[out:json];node["railway"="station"]["name"~"${search.trim()}",i](around:1500000,20.5937,78.9629);out 30;`;
+      const mirrors = [
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://overpass-api.de/api/interpreter',
+        'https://overpass.nchc.org.tw/api/interpreter',
+        'https://z.overpass-api.de/api/interpreter'
+      ];
+
+      for (const mirror of mirrors) {
+        try {
+          const res = await fetch(`${mirror}?data=${encodeURIComponent(q)}`);
+          if (res.ok) {
+            const data = await res.json();
+            if (data.elements?.length) {
+              const parsed = data.elements.map(el => ({
+                id: el.id,
+                name: el.tags?.name || 'Unnamed Station',
+                lat: el.lat, lng: el.lon,
+                distance: userLoc ? haversine(userLoc.lat, userLoc.lng, el.lat, el.lon) : 0
+              })).sort((a, b) => a.distance - b.distance);
+              setStations(parsed);
+              break;
+            }
+          }
+        } catch (err) {
+          console.warn(`Global Overpass mirror query failed for ${mirror}:`, err);
+        }
+      }
+    }, 600);
+
+    return () => clearTimeout(delayDebounce);
+  }, [search, isIndonesia, userLoc]);
+
+  // Restore nearby stations if search is cleared
+  useEffect(() => {
+    if (!search && userLoc) {
+      fetchStations(userLoc.lat, userLoc.lng, 5000);
+    }
+  }, [search, userLoc, fetchStations]);
+
+  // Reset filter tab to All on active search
+  useEffect(() => {
+    if (search && search.trim().length >= 3) {
+      setFilterType('All');
+    }
+  }, [search]);
+
   const popularStations = isIndonesia 
     ? ['GMR', 'BD', 'SLO', 'SGU', 'YK'] 
     : ['MAS', 'NDLS', 'HWH', 'CSMT'];
