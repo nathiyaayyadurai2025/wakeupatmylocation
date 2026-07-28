@@ -490,7 +490,7 @@ export default function RedesignedTrainMode() {
                     key={item.id}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => handleSelectStation(item)}
-                    className="saas-card p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/50"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/50 transition-all shadow-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-10 h-10 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center flex-shrink-0 text-indigo-600">
@@ -565,7 +565,7 @@ export default function RedesignedTrainMode() {
                     key={st.id}
                     whileTap={{ scale: 0.99 }}
                     onClick={() => handleSelectStation(st)}
-                    className="saas-card p-4 flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/50"
+                    className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl flex items-center justify-between gap-3 cursor-pointer hover:bg-slate-100/50 transition-all shadow-sm"
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600">
