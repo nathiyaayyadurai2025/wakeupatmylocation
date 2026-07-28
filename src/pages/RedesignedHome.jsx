@@ -236,9 +236,12 @@ export default function RedesignedHome() {
                     console.warn(e);
                   }
 
+                   const finalLat = localStorage.getItem('destinationLat') || (toStation.lat ? toStation.lat.toString() : (isIndonesia ? '-6.5962' : '9.9252'));
+                  const finalLng = localStorage.getItem('destinationLng') || (toStation.lng ? toStation.lng.toString() : (isIndonesia ? '106.7907' : '78.1198'));
+
                   localStorage.setItem('destinationName', toStation.name);
-                  localStorage.setItem('destinationLat', toStation.lat ? toStation.lat.toString() : (isIndonesia ? '-6.5962' : '9.9252'));
-                  localStorage.setItem('destinationLng', toStation.lng ? toStation.lng.toString() : (isIndonesia ? '106.7907' : '78.1198'));
+                  localStorage.setItem('destinationLat', finalLat);
+                  localStorage.setItem('destinationLng', finalLng);
                   localStorage.setItem('trainName', travelMode + ' Journey');
                   localStorage.setItem('trainNumber', 'GPS-ALARM');
                   localStorage.setItem('alarmTriggered', 'false');

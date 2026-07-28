@@ -47,6 +47,7 @@ function MapAutoFit({ userLoc, destLoc }) {
   const map = useMap();
   useEffect(() => {
     if (!userLoc || !destLoc) return;
+    if (isNaN(userLoc.lat) || isNaN(userLoc.lng) || isNaN(destLoc.lat) || isNaN(destLoc.lng)) return;
     const pts = [[userLoc.lat, userLoc.lng], [destLoc.lat, destLoc.lng]];
     map.fitBounds(L.latLngBounds(pts), { padding: [50, 50], maxZoom: 14 });
   }, [userLoc, destLoc, map]);
@@ -216,15 +217,19 @@ export default function RedesignedTracking() {
             >
               <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
               <MapAutoFit userLoc={userLoc} destLoc={{ lat: destination.lat, lng: destination.lng }} />
-              <Marker position={[userLoc.lat, userLoc.lng]} icon={userIcon}>
-                <Popup>Your Location</Popup>
-              </Marker>
-              <Marker position={[destination.lat, destination.lng]} icon={destIcon}>
-                <Popup>{destination.name}</Popup>
-              </Marker>
+              {!isNaN(userLoc.lat) && !isNaN(userLoc.lng) && (
+                <Marker position={[userLoc.lat, userLoc.lng]} icon={userIcon}>
+                  <Popup>Your Location</Popup>
+                </Marker>
+              )}
+              {!isNaN(destination.lat) && !isNaN(destination.lng) && (
+                <Marker position={[destination.lat, destination.lng]} icon={destIcon}>
+                  <Popup>{destination.name}</Popup>
+                </Marker>
+              )}
 
               {/* Traversed Path: Solid Blue */}
-              {boardingStation && boardingStation.lat && boardingStation.lng && (
+              {boardingStation && !isNaN(boardingStation.lat) && !isNaN(boardingStation.lng) && !isNaN(userLoc.lat) && !isNaN(userLoc.lng) && (
                 <Polyline
                   positions={[[boardingStation.lat, boardingStation.lng], [userLoc.lat, userLoc.lng]]}
                   color="#2563EB"
@@ -233,12 +238,14 @@ export default function RedesignedTracking() {
               )}
 
               {/* Remaining Path: Dotted Blue */}
-              <Polyline
-                positions={[[userLoc.lat, userLoc.lng], [destination.lat, destination.lng]]}
-                color="#2563EB"
-                weight={4}
-                dashArray="5, 8"
-              />
+              {!isNaN(userLoc.lat) && !isNaN(userLoc.lng) && !isNaN(destination.lat) && !isNaN(destination.lng) && (
+                <Polyline
+                  positions={[[userLoc.lat, userLoc.lng], [destination.lat, destination.lng]]}
+                  color="#2563EB"
+                  weight={4}
+                  dashArray="5, 8"
+                />
+              )}
             </MapContainer>
           )}
 
