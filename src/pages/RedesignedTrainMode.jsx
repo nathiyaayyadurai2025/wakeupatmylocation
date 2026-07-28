@@ -25,17 +25,12 @@ const stationIcon = L.divIcon({
   html: `<div style="width:14px;height:14px;background:#10B981;border-radius:50%;border:2px solid white;box-shadow:0 1px 6px rgba(0,0,0,0.2)"></div>`
 });
 
-function MapAutoFit({ userLoc, stations }) {
+function MapAutoFit({ userLoc }) {
   const map = useMap();
   useEffect(() => {
     if (!userLoc) return;
-    if (stations.length > 0) {
-      const pts = [[userLoc.lat, userLoc.lng], ...stations.map(s => [s.lat, s.lng])];
-      map.fitBounds(L.latLngBounds(pts), { padding: [40, 40], maxZoom: 14 });
-    } else {
-      map.setView([userLoc.lat, userLoc.lng], 13);
-    }
-  }, [userLoc, stations, map]);
+    map.setView([userLoc.lat, userLoc.lng], 13);
+  }, [userLoc, map]);
   return null;
 }
 
@@ -172,6 +167,19 @@ export default function RedesignedTrainMode() {
     }
   };
 
+  const handleSelectCustomStation = () => {
+    if (!search.trim()) return;
+    const customSt = {
+      id: 'custom-' + Date.now(),
+      name: search.trim(),
+      lat: userLoc ? userLoc.lat : (isIndonesia ? -6.5962 : 9.9252),
+      lng: userLoc ? userLoc.lng : (isIndonesia ? 106.7907 : 78.1198),
+      code: 'CUST',
+      distance: 0
+    };
+    handleSelectStation(customSt);
+  };
+
   return (
     <div className="pt-16 min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col font-sans max-w-md mx-auto border-x border-slate-200 dark:border-slate-800">
       
@@ -183,7 +191,7 @@ export default function RedesignedTrainMode() {
             className="w-full h-full"
           >
             <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" />
-            <MapAutoFit userLoc={userLoc} stations={stations} />
+            <MapAutoFit userLoc={userLoc} />
             <Marker position={[userLoc.lat, userLoc.lng]} icon={userIcon}>
               <Popup>Your Location</Popup>
             </Marker>
@@ -275,6 +283,27 @@ export default function RedesignedTrainMode() {
 
         {/* Station List */}
         <div className="space-y-2">
+          {search && search.trim() && (
+            <m.div
+              whileTap={{ scale: 0.99 }}
+              onClick={handleSelectCustomStation}
+              className="saas-card p-4 flex items-center justify-between gap-3 cursor-pointer border-dashed border-2 border-blue-500/30 hover:bg-blue-500/5"
+            >
+              <div className="flex items-center gap-3 min-w-0 flex-1">
+                <div className="w-10 h-10 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-center justify-center flex-shrink-0 text-blue-600">
+                  <MapPin size={18} />
+                </div>
+                <div className="min-w-0 flex-1">
+                  <h4 className="font-bold text-sm text-blue-600 truncate">Use custom station: "{search.trim()}"</h4>
+                  <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
+                    Set custom destination manually
+                  </span>
+                </div>
+              </div>
+              <ArrowRight size={16} className="text-blue-500" />
+            </m.div>
+          )}
+
           {filtered.length === 0 ? (
             <div className="saas-card p-8 text-center text-slate-400 text-xs">
               <MapPin size={28} className="mx-auto mb-2 opacity-30" />
