@@ -402,29 +402,28 @@ export default function RedesignedTrainMode() {
             {/* Search inputs */}
             <div className="saas-card p-4 space-y-4">
               <span className="text-[10px] font-black uppercase text-slate-400">Search Address or Landmark</span>
-              <div className="flex gap-2">
+              <form onSubmit={e => { e.preventDefault(); handleGeocodeSearch(search); }} className="flex gap-2">
                 <div className="relative flex-1 flex items-center">
                   <Search size={16} className="absolute left-3 text-slate-400" />
                   <input
                     value={search}
                     onChange={e => setSearch(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && handleGeocodeSearch(search)}
                     placeholder="Search e.g. Central Station..."
                     className="w-full h-11 pl-9 pr-8 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-sm font-medium focus:outline-none"
                   />
                   {search && (
-                    <button onClick={() => setSearch('')} className="absolute right-2.5 w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
+                    <button type="button" onClick={() => setSearch('')} className="absolute right-2.5 w-5 h-5 rounded-full bg-slate-200 dark:bg-slate-700 flex items-center justify-center">
                       <X size={10} className="text-slate-500" />
                     </button>
                   )}
                 </div>
                 <button
-                  onClick={() => handleGeocodeSearch(search)}
+                  type="submit"
                   className="h-11 px-4 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-extrabold text-xs shadow-md transition-all"
                 >
                   Search
                 </button>
-              </div>
+              </form>
 
               {/* Manual Coord Trigger toggle for precise testing or offline fallbacks */}
               <div className="border-t border-slate-100 dark:border-slate-800 pt-3 flex items-center justify-between">
@@ -573,7 +572,9 @@ export default function RedesignedTrainMode() {
                         <Train size={18} />
                       </div>
                       <div className="min-w-0 flex-1">
-                        <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">{st.name}</h4>
+                        <h4 className="font-bold text-sm text-slate-900 dark:text-white truncate">
+                          {st.name}{st.code ? ` - ${st.code}` : ''}
+                        </h4>
                         <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400">
                           {st.code || 'STN'} • {st.operator || 'PT KAI / IR'}
                         </span>
