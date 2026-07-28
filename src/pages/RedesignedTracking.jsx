@@ -68,6 +68,10 @@ export default function RedesignedTracking() {
   const [alarmTriggered, setAlarmTriggered] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
 
+  // Toggles
+  const [highVolumeEnabled, setHighVolumeEnabled] = useState(true);
+  const [vibrationEnabled, setVibrationEnabled] = useState(true);
+
   // Screen Wake Lock States & Callbacks
   const [wakeLockActive, setWakeLockActive] = useState(false);
   const [wakeLockSupported] = useState(typeof window !== 'undefined' && 'wakeLock' in navigator);
@@ -161,10 +165,6 @@ export default function RedesignedTracking() {
       }
     };
   }, [alarmTriggered, vibrationEnabled]);
-
-  // Toggles
-  const [highVolumeEnabled, setHighVolumeEnabled] = useState(true);
-  const [vibrationEnabled, setVibrationEnabled] = useState(true);
 
   const watchIdRef = useRef(null);
 
