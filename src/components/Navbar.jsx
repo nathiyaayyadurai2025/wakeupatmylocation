@@ -2,12 +2,9 @@ import React from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Train, ShieldAlert, Settings } from 'lucide-react';
 import { motion as m } from 'framer-motion';
-import { useCountry } from '../context/CountryContext';
-
 export default function Navbar() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { country, setCountry, countryFlag } = useCountry();
 
   return (
     <header className="fixed top-0 left-0 right-0 z-[4000] glass-nav transition-all duration-300 max-w-md mx-auto border-x border-slate-200 dark:border-slate-800">
@@ -34,8 +31,8 @@ export default function Navbar() {
         {/* Quick Config / Settings Action Bar */}
         <div className="flex items-center gap-2">
           {/* Quick Country Indicator Badge */}
-          <div className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-[11px] font-black text-slate-700 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700/60">
-            {country === 'IN' ? '🇮🇳 IR' : '🇮🇩 KAI'}
+          <div className="px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/20 text-[11px] font-black text-blue-700 dark:text-blue-400 border border-blue-100 dark:border-blue-900/40">
+            🇮🇳 IR
           </div>
 
           <m.button

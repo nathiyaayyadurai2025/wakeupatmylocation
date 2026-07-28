@@ -12,29 +12,25 @@ import TrainAlarmFlow from './pages/TrainAlarmFlow';
 
 // Components
 
-import { CountryProvider } from './context/CountryContext';
-
 import MobileBottomNav from './components/MobileBottomNav';
 
 function App() {
   return (
-    <CountryProvider>
-      <BrowserRouter>
-        <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
-          <main className="flex-1">
-            <Routes>
-              <Route path="/" element={<RedesignedHome />} />
-              <Route path="/train" element={<RedesignedTrainMode />} />
-              <Route path="/trains" element={<RedesignedTrainList />} />
-              <Route path="/tracking" element={<RedesignedTracking />} />
-              <Route path="/location-alarm" element={<TrainAlarmFlow />} />
-            </Routes>
-          </main>
+    <BrowserRouter>
+      <div className="flex flex-col min-h-screen bg-slate-50 dark:bg-slate-950 font-sans transition-colors duration-300">
+        <main className="flex-1">
+          <Routes>
+            <Route path="/" element={<RedesignedHome />} />
+            <Route path="/train" element={<RedesignedTrainMode />} />
+            <Route path="/trains" element={<RedesignedTrainList />} />
+            <Route path="/tracking" element={<RedesignedTracking />} />
+            <Route path="/location-alarm" element={<TrainAlarmFlow />} />
+          </Routes>
+        </main>
 
-          <MobileBottomNav />
-        </div>
-      </BrowserRouter>
-    </CountryProvider>
+        <MobileBottomNav />
+      </div>
+    </BrowserRouter>
   );
 }
 

@@ -2,13 +2,12 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, X, Bell, Check, Train, Clock, MapPin, ArrowRight } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
-import { useCountry } from '../context/CountryContext';
 import indonesiaRailService from '../services/IndonesiaRailService';
 import { CALCULATE_DISTANCE, TRIGGER_ALARM_SOUND, STOP_ALARM_SOUND } from '../constants';
 
 export default function RedesignedTrainList() {
   const navigate = useNavigate();
-  const { isIndonesia, countryFlag } = useCountry();
+  const countryFlag = '🇮🇳';
   const [trains, setTrains] = useState([]);
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
@@ -22,33 +21,11 @@ export default function RedesignedTrainList() {
     const parsedStation = JSON.parse(st);
     setBoardingStation(parsedStation);
 
-    if (isIndonesia) {
-      indonesiaRailService.loadData().then(() => {
-        const stIdentifier = parsedStation.code || parsedStation.id || parsedStation.name;
-        const matchedRoutes = indonesiaRailService.getRoutesForStation(stIdentifier);
+    fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
+  }, [navigate]);
 
-        const formatted = matchedRoutes.map(r => ({
-          trainNumber: r.trainNumber,
-          trainName: r.trainName,
-          category: r.category,
-          stops: r.stops.map(s => ({
-            name: s.stationName,
-            lat: s.latitude,
-            lng: s.longitude,
-            arrival: s.arrival,
-            distanceFromOriginKm: s.distanceFromOriginKm
-          }))
-        }));
-
-        setTrains(formatted);
-      });
-    } else {
-      fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
-    }
-  }, [navigate, isIndonesia]);
-
-  const filters = isIndonesia ? ['All', 'Antarkota', 'Commuter Line', 'Bandara'] : ['All', 'Express', 'Mail', 'Passenger'];
-  const classesList = isIndonesia ? ['ECO', 'BUS', 'EXE'] : ['SL', '3A', '2A', '1A'];
+  const filters = ['All', 'Express', 'Mail', 'Passenger'];
+  const classesList = ['SL', '3A', '2A', '1A'];
 
   const filtered = trains.filter(t => {
     if (boardingStation && t.stops && t.stops.length > 0) {

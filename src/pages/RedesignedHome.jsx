@@ -20,12 +20,11 @@ import {
   ChevronRight,
   Share2
 } from 'lucide-react';
-import { useCountry } from '../context/CountryContext';
 import { TRIGGER_ALARM_SOUND, STOP_ALARM_SOUND } from '../constants';
 
 export default function RedesignedHome() {
   const navigate = useNavigate();
-  const { countryName, countryFlag, setCountry, isIndonesia } = useCountry();
+  const countryFlag = '🇮🇳';
 
   // Booking Widget States
   const [fromStation, setFromStation] = useState(null);
@@ -95,13 +94,12 @@ export default function RedesignedHome() {
         </div>
 
         {/* Dynamic Country Selector IRCTC / PT KAI Accent */}
-        <button
-          onClick={() => setCountry(isIndonesia ? 'IN' : 'ID')}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 shadow-sm text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800"
+        <div
+          className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/50 shadow-sm text-xs font-bold text-blue-700 dark:text-blue-400"
         >
-          <span>{countryFlag}</span>
-          <span>{isIndonesia ? 'KAI Access' : 'IRCTC app'}</span>
-        </button>
+          <span>🇮🇳</span>
+          <span>Indian Railways</span>
+        </div>
       </div>
 
       {/* Floating Active Journey Alert Banner */}
@@ -236,8 +234,8 @@ export default function RedesignedHome() {
                     console.warn(e);
                   }
 
-                   const finalLat = localStorage.getItem('destinationLat') || (toStation.lat ? toStation.lat.toString() : (isIndonesia ? '-6.5962' : '9.9252'));
-                  const finalLng = localStorage.getItem('destinationLng') || (toStation.lng ? toStation.lng.toString() : (isIndonesia ? '106.7907' : '78.1198'));
+                   const finalLat = localStorage.getItem('destinationLat') || (toStation.lat ? toStation.lat.toString() : '9.9252');
+                   const finalLng = localStorage.getItem('destinationLng') || (toStation.lng ? toStation.lng.toString() : '78.1198');
 
                   localStorage.setItem('destinationName', toStation.name);
                   localStorage.setItem('destinationLat', finalLat);

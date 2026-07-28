@@ -1,0 +1,178 @@
+[
+  {
+    "code": "MAS",
+    "name": "Chennai Central",
+    "englishName": "Chennai Central",
+    "hindiName": "चेन्नई सेंट्रल",
+    "lat": 13.0827,
+    "lng": 80.2707,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Chennai"
+  },
+  {
+    "code": "MS",
+    "name": "Chennai Egmore",
+    "englishName": "Chennai Egmore",
+    "hindiName": "चेन्नई एग्मोर",
+    "lat": 13.0785,
+    "lng": 80.2614,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Chennai"
+  },
+  {
+    "code": "NDLS",
+    "name": "New Delhi",
+    "englishName": "New Delhi",
+    "hindiName": "नई दिल्ली",
+    "lat": 28.6444,
+    "lng": 77.2218,
+    "zone": "NR",
+    "state": "Delhi",
+    "district": "New Delhi"
+  },
+  {
+    "code": "SBC",
+    "name": "KSR Bengaluru City Junction",
+    "englishName": "KSR Bengaluru City Junction",
+    "hindiName": "केएसआर बेंगलुरु सिटी जंक्शन",
+    "lat": 12.9784,
+    "lng": 77.5696,
+    "zone": "SWR",
+    "state": "Karnataka",
+    "district": "Bengaluru"
+  },
+  {
+    "code": "CBE",
+    "name": "Coimbatore Junction",
+    "englishName": "Coimbatore Junction",
+    "hindiName": "कोयंबटूर जंक्शन",
+    "lat": 10.9980,
+    "lng": 76.9634,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Coimbatore"
+  },
+  {
+    "code": "MDU",
+    "name": "Madurai Junction",
+    "englishName": "Madurai Junction",
+    "hindiName": "मदुरै जंक्शन",
+    "lat": 9.9252,
+    "lng": 78.1198,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Madurai"
+  },
+  {
+    "code": "TPJ",
+    "name": "Tiruchirappalli Junction",
+    "englishName": "Tiruchirappalli Junction",
+    "hindiName": "तिरुचिरापल्ली जंक्शन",
+    "lat": 10.8050,
+    "lng": 78.6856,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Tiruchirappalli"
+  },
+  {
+    "code": "ERS",
+    "name": "Ernakulam Junction",
+    "englishName": "Ernakulam Junction",
+    "hindiName": "एर्नाकुलम जंक्शन",
+    "lat": 9.9625,
+    "lng": 76.2996,
+    "zone": "SR",
+    "state": "Kerala",
+    "district": "Ernakulam"
+  },
+  {
+    "code": "CSMT",
+    "name": "Chhatrapati Shivaji Maharaj Terminus",
+    "englishName": "Chhatrapati Shivaji Maharaj Terminus",
+    "hindiName": "छत्रपति शिवाजी महाराज टर्मिनस",
+    "lat": 18.9401,
+    "lng": 72.8354,
+    "zone": "CR",
+    "state": "Maharashtra",
+    "district": "Mumbai City"
+  },
+  {
+    "code": "HWH",
+    "name": "Howrah Junction",
+    "englishName": "Howrah Junction",
+    "hindiName": "हावड़ा जंक्शन",
+    "lat": 22.5833,
+    "lng": 88.3333,
+    "zone": "ER",
+    "state": "West Bengal",
+    "district": "Howrah"
+  },
+  {
+    "code": "TBM",
+    "name": "Tambaram",
+    "englishName": "Tambaram",
+    "hindiName": "ताम्बरम",
+    "lat": 12.9250,
+    "lng": 80.1170,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Chengalpattu"
+  },
+  {
+    "code": "DG",
+    "name": "Dindigul Junction",
+    "englishName": "Dindigul Junction",
+    "hindiName": "डिंडीगुल जंक्शन",
+    "lat": 10.3535,
+    "lng": 77.9842,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Dindigul"
+  },
+  {
+    "code": "VM",
+    "name": "Villupuram Junction",
+    "englishName": "Villupuram Junction",
+    "hindiName": "विल्लुपुरम जंक्शन",
+    "lat": 11.9401,
+    "lng": 79.4861,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Viluppuram"
+  },
+  {
+    "code": "CGL",
+    "name": "Chengalpattu Junction",
+    "englishName": "Chengalpattu Junction",
+    "hindiName": "चेंगलपट्टू जंक्शन",
+    "lat": 12.6934,
+    "lng": 79.9756,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Chengalpattu"
+  },
+  {
+    "code": "CVP",
+    "name": "Kovilpatti",
+    "englishName": "Kovilpatti",
+    "hindiName": "कोविलपट्टी",
+    "lat": 9.1726,
+    "lng": 77.8697,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Thoothukudi"
+  },
+  {
+    "code": "TEN",
+    "name": "Tirunelveli Junction",
+    "englishName": "Tirunelveli Junction",
+    "hindiName": "तिरुनेलवेली जंक्शन",
+    "lat": 8.7139,
+    "lng": 77.7567,
+    "zone": "SR",
+    "state": "Tamil Nadu",
+    "district": "Tirunelveli"
+  }
+]

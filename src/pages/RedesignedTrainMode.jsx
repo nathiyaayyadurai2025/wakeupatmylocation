@@ -5,8 +5,7 @@ import L from 'leaflet';
 import { MapPin, Search, X, Navigation, Check, Train, ArrowLeft, ArrowRight, History } from 'lucide-react';
 import { motion as m, AnimatePresence } from 'framer-motion';
 import 'leaflet/dist/leaflet.css';
-import { useCountry } from '../context/CountryContext';
-import { useIndonesiaRail } from '../hooks/useIndonesiaRail';
+import indianStations from '../data/indianStations.json';
 
 const userIcon = L.divIcon({
   className: '',
@@ -52,7 +51,8 @@ function haversine(lat1, lon1, lat2, lon2) {
 export default function RedesignedTrainMode() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { isIndonesia, countryFlag, countryName } = useCountry();
+  const countryFlag = '🇮🇳';
+  const countryName = 'India';
   const [userLoc, setUserLoc] = useState(null);
   const [stations, setStations] = useState([]);
   const [search, setSearch] = useState('');
@@ -68,73 +68,7 @@ export default function RedesignedTrainMode() {
   const [manualLat, setManualLat] = useState('');
   const [manualLng, setManualLng] = useState('');
   const [selectedMapTapDest, setSelectedMapTapDest] = useState(null);
-
-  const {
-    setStationQuery,
-    stations: indonesiaStations,
-    nearestStationResult
-  } = useIndonesiaRail(userLoc);
-
-  useEffect(() => {
-    setStationQuery(search || '');
-  }, [search, setStationQuery]);
-
-  const fetchStations = useCallback(async (lat, lng, radius) => {
-    if (isIndonesia) {
-      const allIdStations = indonesiaStations.map(st => ({
-        id: st.stationCode,
-        code: st.stationCode,
-        name: st.stationName,
-        lat: st.latitude,
-        lng: st.longitude,
-        city: st.city,
-        province: st.province,
-        operator: st.operator,
-        distance: haversine(lat, lng, st.latitude, st.longitude)
-      })).sort((a, b) => a.distance - b.distance);
-
-      setStations(allIdStations);
-      return;
-    }
-
-    const q = `[out:json];node["railway"="station"](around:${radius},${lat},${lng});out;`;
-    const mirrors = [
-      'https://overpass.kumi.systems/api/interpreter',
-      'https://overpass-api.de/api/interpreter',
-      'https://overpass.nchc.org.tw/api/interpreter',
-      'https://z.overpass-api.de/api/interpreter'
-    ];
-
-    let success = false;
-    let data = null;
-
-    for (const mirror of mirrors) {
-      try {
-        const res = await fetch(`${mirror}?data=${encodeURIComponent(q)}`);
-        if (res.ok) {
-          data = await res.json();
-          success = true;
-          break;
-        }
-      } catch (err) {
-        console.warn(`Overpass mirror ${mirror} failed or blocked by CORS:`, err);
-      }
-    }
-
-    if (success && data && data.elements?.length) {
-      const parsed = data.elements.map(el => ({
-        id: el.id,
-        name: el.tags?.name || 'Unnamed Station',
-        lat: el.lat, lng: el.lon,
-        distance: haversine(lat, lng, el.lat, el.lon)
-      })).sort((a, b) => a.distance - b.distance);
-      setStations(parsed);
-    } else if (radius < 10000) {
-      fetchStations(lat, lng, 10000);
-    } else {
-      setStations([]);
-    }
-  }, [isIndonesia, indonesiaStations]);
+  const popularStations = ['MAS', 'NDLS', 'HWH', 'CSMT', 'SBC', 'CBE', 'MDU', 'TPJ', 'ERS', 'TBM'];
 
   useEffect(() => {
     if (!navigator.geolocation) return;
@@ -142,64 +76,15 @@ export default function RedesignedTrainMode() {
       pos => {
         const { latitude: lat, longitude: lng } = pos.coords;
         setUserLoc({ lat, lng });
-        fetchStations(lat, lng, 5000);
       },
       () => {
-        const fallbackLat = isIndonesia ? -6.1767 : 13.0827;
-        const fallbackLng = isIndonesia ? 106.8306 : 80.2707;
+        const fallbackLat = 13.0827; // Chennai Central
+        const fallbackLng = 80.2707;
         setUserLoc({ lat: fallbackLat, lng: fallbackLng });
-        fetchStations(fallbackLat, fallbackLng, 10000);
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isIndonesia]);
-
-  // Debounced Global Station Search (India Mode)
-  useEffect(() => {
-    if (isIndonesia) return;
-    if (!search || search.trim().length < 3) return;
-
-    const delayDebounce = setTimeout(async () => {
-      const q = `[out:json];node["railway"="station"]["name"~"${search.trim()}",i](around:1500000,20.5937,78.9629);out 30;`;
-      const mirrors = [
-        'https://overpass.kumi.systems/api/interpreter',
-        'https://overpass-api.de/api/interpreter',
-        'https://overpass.nchc.org.tw/api/interpreter',
-        'https://z.overpass-api.de/api/interpreter'
-      ];
-
-      for (const mirror of mirrors) {
-        try {
-          const res = await fetch(`${mirror}?data=${encodeURIComponent(q)}`);
-          if (res.ok) {
-            const data = await res.json();
-            if (data.elements?.length) {
-              const parsed = data.elements.map(el => ({
-                id: el.id,
-                name: el.tags?.name || 'Unnamed Station',
-                lat: el.lat, lng: el.lon,
-                distance: userLoc ? haversine(userLoc.lat, userLoc.lng, el.lat, el.lon) : 0
-              })).sort((a, b) => a.distance - b.distance);
-              setStations(parsed);
-              break;
-            }
-          }
-        } catch (err) {
-          console.warn(`Global Overpass mirror query failed for ${mirror}:`, err);
-        }
-      }
-    }, 600);
-
-    return () => clearTimeout(delayDebounce);
-  }, [search, isIndonesia, userLoc]);
-
-  // Restore nearby stations if search is cleared
-  useEffect(() => {
-    if (!search && userLoc) {
-      fetchStations(userLoc.lat, userLoc.lng, 5000);
-    }
-  }, [search, userLoc, fetchStations]);
+  }, []);
 
   // Reset filter tab to All on active search
   useEffect(() => {
@@ -208,23 +93,27 @@ export default function RedesignedTrainMode() {
     }
   }, [search]);
 
-  const popularStations = isIndonesia 
-    ? ['GMR', 'BD', 'SLO', 'SGU', 'YK'] 
-    : ['MAS', 'NDLS', 'HWH', 'CSMT'];
+  const filtered = indianStations.filter(s => {
+    const q = search.trim().toLowerCase();
+    if (!q) {
+      if (filterType === 'Nearby') {
+        return userLoc ? haversine(userLoc.lat, userLoc.lng, s.lat, s.lng) <= 100 : true;
+      }
+      if (filterType === 'Popular') {
+        return popularStations.includes(s.code);
+      }
+      return true;
+    }
 
-  const filtered = stations.filter(s => {
-    const q = search.toLowerCase();
     const nameMatch = s.name.toLowerCase().includes(q);
-    const codeMatch = s.code ? s.code.toLowerCase().includes(q) : false;
-    const cityMatch = s.city ? s.city.toLowerCase().includes(q) : false;
-
-    const baseMatch = nameMatch || codeMatch || cityMatch;
-    if (!baseMatch) return false;
-
-    if (filterType === 'Nearby') return s.distance <= 15;
-    if (filterType === 'Popular') return popularStations.includes(s.code || '');
-    return true;
-  });
+    const codeMatch = s.code.toLowerCase().includes(q);
+    const stateMatch = s.state.toLowerCase().includes(q);
+    return nameMatch || codeMatch || stateMatch;
+  }).map(s => ({
+    ...s,
+    id: s.code,
+    distance: userLoc ? haversine(userLoc.lat, userLoc.lng, s.lat, s.lng) : 0
+  })).sort((a, b) => a.distance - b.distance);
 
   const handleSelectStation = (st) => {
     if (selectType === 'FROM') {
@@ -244,8 +133,8 @@ export default function RedesignedTrainMode() {
     const customSt = {
       id: 'custom-' + Date.now(),
       name: search.trim(),
-      lat: userLoc ? userLoc.lat : (isIndonesia ? -6.5962 : 9.9252),
-      lng: userLoc ? userLoc.lng : (isIndonesia ? 106.7907 : 78.1198),
+      lat: userLoc ? userLoc.lat : 13.0827,
+      lng: userLoc ? userLoc.lng : 80.2707,
       code: 'CUST',
       distance: 0
     };

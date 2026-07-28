@@ -10,12 +10,9 @@ const STEPS = [
   { path: '/tracking', label: 'Tracking' },
 ];
 
-import { useCountry } from '../context/CountryContext';
-
 export default function StepHeader() {
   const { pathname } = useLocation();
   const [offline, setOffline] = useState(!navigator.onLine);
-  const { country, setCountry } = useCountry();
 
   useEffect(() => {
     const on = () => setOffline(false);
@@ -94,29 +91,12 @@ export default function StepHeader() {
           })}
         </div>
 
-        {/* Country Switcher Pill */}
+        {/* Country Switcher Pill - Indian Railways Static Logo */}
         <div
-          className="pointer-events-auto flex items-center p-0.5 rounded-full"
-          style={{ background: 'rgba(17,24,39,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.06)', boxShadow: '0 4px 24px rgba(0,0,0,0.4)' }}
+          className="pointer-events-auto flex items-center px-3 py-1.5 rounded-full bg-slate-900/90 border border-white/5 text-[10px] uppercase font-bold text-slate-400 gap-1.5 shadow-md"
         >
-          <button
-            onClick={() => setCountry('IN')}
-            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
-              country === 'IN' ? 'bg-[#3B82F6] text-white shadow-md' : 'text-[#9CA3AF] hover:text-white'
-            }`}
-          >
-            <span>🇮🇳</span>
-            <span className="text-[10px] uppercase">IN</span>
-          </button>
-          <button
-            onClick={() => setCountry('ID')}
-            className={`px-2.5 py-1 rounded-full text-xs font-bold transition-all flex items-center gap-1 ${
-              country === 'ID' ? 'bg-[#EF4444] text-white shadow-md' : 'text-[#9CA3AF] hover:text-white'
-            }`}
-          >
-            <span>🇮🇩</span>
-            <span className="text-[10px] uppercase">ID</span>
-          </button>
+          <span>🇮🇳</span>
+          <span>IR</span>
         </div>
       </div>
 

@@ -23,7 +23,6 @@ import {
 } from 'lucide-react';
 import 'leaflet/dist/leaflet.css';
 import { CALCULATE_DISTANCE, TRIGGER_ALARM_SOUND, STOP_ALARM_SOUND, ESTIMATE_TIME } from '../constants';
-import { useCountry } from '../context/CountryContext';
 
 // Leaflet Map Icons
 const userIcon = L.divIcon({
@@ -55,8 +54,8 @@ function MapAutoFit({ userLoc, destLoc }) {
 }
 
 export default function RedesignedTracking() {
+  const countryFlag = '🇮🇳';
   const navigate = useNavigate();
-  const { isIndonesia, countryFlag } = useCountry();
 
   const [destination, setDestination] = useState(null);
   const [boardingStation, setBoardingStation] = useState(null);
@@ -192,15 +191,15 @@ export default function RedesignedTracking() {
 
     if (!destName || isNaN(destLat) || isNaN(destLng)) {
       // Provide clean default destination if user opened /tracking directly
-      destName = isIndonesia ? 'Stasiun Bogor' : 'Madurai Junction';
-      destLat = isIndonesia ? -6.5962 : 9.9252;
-      destLng = isIndonesia ? 106.7907 : 78.1198;
+      destName = 'Madurai Junction';
+      destLat = 9.9252;
+      destLng = 78.1198;
 
       localStorage.setItem('destinationName', destName);
       localStorage.setItem('destinationLat', destLat.toString());
       localStorage.setItem('destinationLng', destLng.toString());
-      localStorage.setItem('trainName', isIndonesia ? 'KAI Commuter Line Bogor' : 'Pandian Express');
-      localStorage.setItem('trainNumber', isIndonesia ? 'CL-4101' : '12637');
+      localStorage.setItem('trainName', 'Pandian Express');
+      localStorage.setItem('trainNumber', '12637');
     }
 
     const destObj = {
@@ -213,9 +212,9 @@ export default function RedesignedTracking() {
 
     setDestination(destObj);
 
-    // Initial fallback user location near destination
-    const initUserLat = isIndonesia ? -6.5305 : 10.3673; // Cilebut or Dindigul
-    const initUserLng = isIndonesia ? 106.8006 : 77.9803;
+    // Initial fallback user location near destination (Dindigul Junction)
+    const initUserLat = 10.3535;
+    const initUserLng = 77.9842;
     setUserLoc({ lat: initUserLat, lng: initUserLng });
 
     const initialDist = CALCULATE_DISTANCE(initUserLat, initUserLng, destLat, destLng);
@@ -304,15 +303,6 @@ export default function RedesignedTracking() {
         },
         optionsHigh
       );
-
-      // Robust Interval Polling Fallback (ensures screen-off & browser background compatibility)
-      intervalId = setInterval(() => {
-        getFix(optionsHigh);
-        // Detect if GPS signal is lost (no fix in 15 seconds)
-        if (Date.now() - lastFixTimeRef.current > 15000) {
-          setGpsStatus('Lost');
-        }
-      }, 4000);
     }
 
     return () => {
@@ -325,7 +315,52 @@ export default function RedesignedTracking() {
       }
       STOP_ALARM_SOUND();
     };
-  }, [alarmRadius, alarmTriggered, isPaused, isIndonesia, isDemoMode, simSpeed]);
+  }, [alarmRadius, alarmTriggered, isPaused, isDemoMode, simSpeed]);
+
+  // Smart Battery Mode background GPS poller
+  useEffect(() => {
+    if (isDemoMode || !navigator.geolocation || isPaused || alarmTriggered) return;
+
+    let pollInterval = 4000; // Default fallback: 4s
+    if (distRemaining !== null) {
+      if (distRemaining > 100) {
+        pollInterval = 300000; // >100 km: every 5 minutes
+      } else if (distRemaining > 20) {
+        pollInterval = 120000; // 20 km to 100 km: every 2 minutes
+      } else if (distRemaining > 5) {
+        pollInterval = 20000;  // 5 km to 20 km: every 20 seconds
+      } else {
+        pollInterval = 5000;   // <5 km: every 5 seconds
+      }
+    }
+
+    const optionsHigh = { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 };
+    const optionsLow = { enableHighAccuracy: false, timeout: 10000, maximumAge: 3000 };
+
+    const getFix = (options) => {
+      navigator.geolocation.getCurrentPosition(
+        pos => updateLocation(pos.coords.latitude, pos.coords.longitude, pos.coords.speed),
+        err => {
+          console.warn("Smart Battery GPS Fix Error:", err);
+          if (err.code === 1) {
+            setGpsStatus('Lost');
+          } else if (options === optionsHigh) {
+            getFix(optionsLow);
+          }
+        },
+        options
+      );
+    };
+
+    const intervalId = setInterval(() => {
+      getFix(optionsHigh);
+      if (Date.now() - lastFixTimeRef.current > pollInterval + 15000) {
+        setGpsStatus('Lost');
+      }
+    }, pollInterval);
+
+    return () => clearInterval(intervalId);
+  }, [distRemaining, isDemoMode, isPaused, alarmTriggered]);
 
   const handleDismissAlarm = () => {
     STOP_ALARM_SOUND();
