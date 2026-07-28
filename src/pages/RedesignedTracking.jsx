@@ -294,13 +294,44 @@ export default function RedesignedTracking() {
   const handleDismissAlarm = () => {
     STOP_ALARM_SOUND();
     setAlarmTriggered(false);
+    if (navigator.vibrate) {
+      navigator.vibrate(0);
+    }
+    // Clean up tracking watcher
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    releaseWakeLock();
+
+    // Clear storage keys
     localStorage.removeItem('destinationName');
-    navigate('/train');
+    localStorage.removeItem('destinationLat');
+    localStorage.removeItem('destinationLng');
+    localStorage.removeItem('boardingStation');
+
+    navigate('/');
   };
 
   const handleEndJourney = () => {
     STOP_ALARM_SOUND();
+    setAlarmTriggered(false);
+    if (navigator.vibrate) {
+      navigator.vibrate(0);
+    }
+    // Clean up tracking watcher
+    if (watchIdRef.current !== null) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    releaseWakeLock();
+
+    // Clear storage keys
     localStorage.removeItem('destinationName');
+    localStorage.removeItem('destinationLat');
+    localStorage.removeItem('destinationLng');
+    localStorage.removeItem('boardingStation');
+
     navigate('/');
   };
 
@@ -366,26 +397,53 @@ export default function RedesignedTracking() {
           )}
         </div>
 
-        {/* Alarm Triggered Overlay Alert */}
+        {/* Alarm Triggered Full-Screen Modal Overlay */}
         <AnimatePresence>
           {alarmTriggered && (
             <m.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="p-6 rounded-[28px] bg-gradient-to-r from-red-600 via-rose-600 to-red-600 text-white shadow-2xl space-y-4 text-center border-2 border-white/20 animate-pulse"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="fixed inset-0 z-[9999] bg-slate-950/95 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white space-y-6"
             >
-              <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center mx-auto">
-                <Bell size={32} className="animate-bounce" />
-              </div>
-              <h2 className="text-3xl font-black">WAKE UP! You are near {destination?.name}!</h2>
-              <p className="text-red-100 font-medium">Distance remaining: {distRemaining} km</p>
-              <button
-                onClick={handleDismissAlarm}
-                className="w-full h-14 rounded-2xl bg-white text-red-600 font-extrabold text-base shadow-xl hover:bg-red-50 transition-all"
+              <m.div
+                initial={{ scale: 0.8, y: 20 }}
+                animate={{ scale: 1, y: 0 }}
+                exit={{ scale: 0.8, y: 20 }}
+                className="w-full max-w-sm p-8 rounded-[32px] bg-gradient-to-b from-slate-900 to-slate-950 border border-red-500/30 shadow-2xl space-y-6"
               >
-                Disarm & Dismiss Alarm
-              </button>
+                <div className="relative w-24 h-24 mx-auto flex items-center justify-center">
+                  <div className="absolute inset-0 rounded-full bg-red-500/20 animate-ping" />
+                  <div className="w-20 h-20 rounded-full bg-red-600 flex items-center justify-center shadow-lg shadow-red-500/50">
+                    <Bell size={40} className="animate-bounce" />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <span className="text-[10px] font-black text-red-500 uppercase tracking-widest px-3 py-1 rounded-full bg-red-500/10">
+                    Destination Reached
+                  </span>
+                  <h2 className="text-3xl font-black tracking-tight leading-none mt-2">YOU HAVE ARRIVED!</h2>
+                  <p className="text-sm font-bold text-slate-300">
+                    You are near <span className="text-white underline decoration-red-500 decoration-2">{destination?.name}</span>!
+                  </p>
+                </div>
+
+                <div className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 text-left space-y-1">
+                  <span className="text-[9px] uppercase font-bold text-slate-500">Live Distance Check</span>
+                  <p className="text-sm font-extrabold text-slate-200">
+                    Distance remaining: <span className="text-red-400">{distRemaining} km</span>
+                  </p>
+                </div>
+
+                <m.button
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleDismissAlarm}
+                  className="w-full h-15 rounded-2xl bg-gradient-to-r from-red-600 via-rose-600 to-red-600 hover:from-red-500 hover:to-rose-500 text-white font-black text-base shadow-xl shadow-red-500/30 transition-all flex items-center justify-center gap-2"
+                >
+                  <span>⏰ I'm Awake / Dismiss Alarm</span>
+                </m.button>
+              </m.div>
             </m.div>
           )}
         </AnimatePresence>
