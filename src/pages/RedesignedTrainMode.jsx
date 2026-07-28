@@ -121,7 +121,8 @@ export default function RedesignedTrainMode() {
       },
       { enableHighAccuracy: true, timeout: 10000 }
     );
-  }, [isIndonesia, fetchStations]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isIndonesia]);
 
   const popularStations = isIndonesia 
     ? ['GMR', 'BD', 'SLO', 'SGU', 'YK'] 
