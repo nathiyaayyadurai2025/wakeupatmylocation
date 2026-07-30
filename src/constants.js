@@ -762,7 +762,37 @@ export const API_BASE_URL = typeof window !== 'undefined' && window.location.hos
   : '/api';
 
 let audioCtx = null;
-let alarmIntervalId = null;
+let schedulerIntervalId = null;
+let nextNoteTime = 0.0;
+
+const scheduleNote = (time) => {
+  if (!audioCtx) return;
+  // Note 1: C5 (523.25 Hz)
+  const osc1 = audioCtx.createOscillator();
+  const gain1 = audioCtx.createGain();
+  osc1.type = 'sine';
+  osc1.frequency.setValueAtTime(523.25, time);
+  gain1.gain.setValueAtTime(0.3, time);
+  gain1.gain.exponentialRampToValueAtTime(0.01, time + 0.35);
+
+  osc1.connect(gain1);
+  gain1.connect(audioCtx.destination);
+  osc1.start(time);
+  osc1.stop(time + 0.4);
+
+  // Note 2: G5 (783.99 Hz) playing slightly delayed
+  const osc2 = audioCtx.createOscillator();
+  const gain2 = audioCtx.createGain();
+  osc2.type = 'sine';
+  osc2.frequency.setValueAtTime(783.99, time + 0.15);
+  gain2.gain.setValueAtTime(0.4, time + 0.15);
+  gain2.gain.exponentialRampToValueAtTime(0.01, time + 0.6);
+
+  osc2.connect(gain2);
+  gain2.connect(audioCtx.destination);
+  osc2.start(time + 0.15);
+  osc2.stop(time + 0.65);
+};
 
 export const TRIGGER_ALARM_SOUND = () => {
   try {
@@ -773,43 +803,21 @@ export const TRIGGER_ALARM_SOUND = () => {
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
-    if (alarmIntervalId) return; // already looping
+    if (schedulerIntervalId) return; // already running
 
-    const playTidin = () => {
-      const now = audioCtx.currentTime;
+    nextNoteTime = audioCtx.currentTime;
 
-      // Note 1: C5 (523.25 Hz)
-      const osc1 = audioCtx.createOscillator();
-      const gain1 = audioCtx.createGain();
-      osc1.type = 'sine';
-      osc1.frequency.setValueAtTime(523.25, now);
-      gain1.gain.setValueAtTime(0.3, now);
-      gain1.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-
-      osc1.connect(gain1);
-      gain1.connect(audioCtx.destination);
-      osc1.start(now);
-      osc1.stop(now + 0.4);
-
-      // Note 2: G5 (783.99 Hz) playing slightly delayed
-      const osc2 = audioCtx.createOscillator();
-      const gain2 = audioCtx.createGain();
-      osc2.type = 'sine';
-      osc2.frequency.setValueAtTime(783.99, now + 0.15);
-      gain2.gain.setValueAtTime(0.4, now + 0.15);
-      gain2.gain.exponentialRampToValueAtTime(0.01, now + 0.6);
-
-      osc2.connect(gain2);
-      gain2.connect(audioCtx.destination);
-      osc2.start(now + 0.15);
-      osc2.stop(now + 0.65);
+    const scheduler = () => {
+      // Schedule notes that fall within the next 4 seconds (handles background suspension windows)
+      while (nextNoteTime < audioCtx.currentTime + 4.0) {
+        scheduleNote(nextNoteTime);
+        nextNoteTime += 1.5; // Repeat interval
+      }
     };
 
-    // Play immediately
-    playTidin();
-
-    // Loop it every 1.5 seconds
-    alarmIntervalId = setInterval(playTidin, 1500);
+    // Run scheduler immediately and on interval
+    scheduler();
+    schedulerIntervalId = setInterval(scheduler, 500);
   } catch (err) {
     console.warn("Audio Context playback error:", err);
   }
@@ -817,9 +825,9 @@ export const TRIGGER_ALARM_SOUND = () => {
 
 export const STOP_ALARM_SOUND = () => {
   try {
-    if (alarmIntervalId) {
-      clearInterval(alarmIntervalId);
-      alarmIntervalId = null;
+    if (schedulerIntervalId) {
+      clearInterval(schedulerIntervalId);
+      schedulerIntervalId = null;
     }
   } catch (err) {
     console.warn("Error stopping alarm audio:", err);
