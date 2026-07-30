@@ -173,6 +173,29 @@ export default function RedesignedTracking() {
 
   const watchIdRef = useRef(null);
 
+  const updateLocation = useCallback((lat, lng, speed) => {
+    const destLatStr = localStorage.getItem('destinationLat');
+    const destLngStr = localStorage.getItem('destinationLng');
+    const destLat = destLatStr ? parseFloat(destLatStr) : 9.9252;
+    const destLng = destLngStr ? parseFloat(destLngStr) : 78.1198;
+
+    lastFixTimeRef.current = Date.now();
+    setGpsStatus('Optimal');
+    setUserLoc({ lat, lng });
+    const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
+    setCurrentSpeed(liveSpeed);
+
+    const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
+    setDistRemaining(parseFloat(dist.toFixed(2)));
+    setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
+
+    // Alarm Trigger Condition
+    if (dist <= alarmRadius && !alarmTriggered && !isPaused) {
+      setAlarmTriggered(true);
+      TRIGGER_ALARM_SOUND();
+    }
+  }, [alarmRadius, alarmTriggered, isPaused]);
+
   useEffect(() => {
     // Load boarding station if present
     const boardingStStr = localStorage.getItem('boardingStation');
@@ -220,24 +243,6 @@ export default function RedesignedTracking() {
     const initialDist = CALCULATE_DISTANCE(initUserLat, initUserLng, destLat, destLng);
     setDistRemaining(parseFloat(initialDist.toFixed(2)));
     setEtaMins(ESTIMATE_TIME(initialDist, 55));
-
-    const updateLocation = (lat, lng, speed) => {
-      lastFixTimeRef.current = Date.now();
-      setGpsStatus('Optimal');
-      setUserLoc({ lat, lng });
-      const liveSpeed = (speed && !isNaN(speed) && speed > 0) ? Math.round(speed * 3.6) : 55;
-      setCurrentSpeed(liveSpeed);
-
-      const dist = CALCULATE_DISTANCE(lat, lng, destLat, destLng);
-      setDistRemaining(parseFloat(dist.toFixed(2)));
-      setEtaMins(ESTIMATE_TIME(dist, liveSpeed));
-
-      // Alarm Trigger Condition
-      if (dist <= alarmRadius && !alarmTriggered && !isPaused) {
-        setAlarmTriggered(true);
-        TRIGGER_ALARM_SOUND();
-      }
-    };
 
     // 2. Geolocation Watch or Demo Mode simulation loop
     let intervalId = null;
@@ -315,7 +320,7 @@ export default function RedesignedTracking() {
       }
       STOP_ALARM_SOUND();
     };
-  }, [alarmRadius, alarmTriggered, isPaused, isDemoMode, simSpeed]);
+  }, [alarmRadius, alarmTriggered, isPaused, isDemoMode, simSpeed, updateLocation]);
 
   // Smart Battery Mode background GPS poller
   useEffect(() => {
@@ -360,7 +365,7 @@ export default function RedesignedTracking() {
     }, pollInterval);
 
     return () => clearInterval(intervalId);
-  }, [distRemaining, isDemoMode, isPaused, alarmTriggered]);
+  }, [distRemaining, isDemoMode, isPaused, alarmTriggered, updateLocation]);
 
   const handleDismissAlarm = () => {
     STOP_ALARM_SOUND();
