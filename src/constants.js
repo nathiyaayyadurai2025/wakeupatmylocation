@@ -829,6 +829,12 @@ export const STOP_ALARM_SOUND = () => {
       clearInterval(schedulerIntervalId);
       schedulerIntervalId = null;
     }
+    if (audioCtx) {
+      if (audioCtx.close) {
+        audioCtx.close();
+      }
+      audioCtx = null;
+    }
   } catch (err) {
     console.warn("Error stopping alarm audio:", err);
   }
