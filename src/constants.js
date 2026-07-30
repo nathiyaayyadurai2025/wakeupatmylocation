@@ -762,11 +762,12 @@ export const API_BASE_URL = typeof window !== 'undefined' && window.location.hos
   : '/api';
 
 let audioCtx = null;
+let masterGain = null;
 let schedulerIntervalId = null;
 let nextNoteTime = 0.0;
 
 const scheduleNote = (time) => {
-  if (!audioCtx) return;
+  if (!audioCtx || !masterGain) return;
   // Note 1: C5 (523.25 Hz)
   const osc1 = audioCtx.createOscillator();
   const gain1 = audioCtx.createGain();
@@ -776,7 +777,7 @@ const scheduleNote = (time) => {
   gain1.gain.exponentialRampToValueAtTime(0.01, time + 0.35);
 
   osc1.connect(gain1);
-  gain1.connect(audioCtx.destination);
+  gain1.connect(masterGain);
   osc1.start(time);
   osc1.stop(time + 0.4);
 
@@ -789,7 +790,7 @@ const scheduleNote = (time) => {
   gain2.gain.exponentialRampToValueAtTime(0.01, time + 0.6);
 
   osc2.connect(gain2);
-  gain2.connect(audioCtx.destination);
+  gain2.connect(masterGain);
   osc2.start(time + 0.15);
   osc2.stop(time + 0.65);
 };
@@ -799,10 +800,18 @@ export const TRIGGER_ALARM_SOUND = () => {
     if (typeof window === 'undefined') return;
     if (!audioCtx) {
       audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      masterGain = audioCtx.createGain();
+      masterGain.connect(audioCtx.destination);
     }
     if (audioCtx.state === 'suspended') {
       audioCtx.resume();
     }
+
+    // Ensure sound is unmuted
+    if (masterGain) {
+      masterGain.gain.setValueAtTime(1, audioCtx.currentTime);
+    }
+
     if (schedulerIntervalId) return; // already running
 
     nextNoteTime = audioCtx.currentTime;
@@ -829,11 +838,10 @@ export const STOP_ALARM_SOUND = () => {
       clearInterval(schedulerIntervalId);
       schedulerIntervalId = null;
     }
-    if (audioCtx) {
-      if (audioCtx.close) {
-        audioCtx.close();
-      }
-      audioCtx = null;
+    // Mute master volume instantly to silence queued/scheduled notes,
+    // but KEEP the AudioContext alive and unlocked!
+    if (masterGain && audioCtx) {
+      masterGain.gain.setValueAtTime(0, audioCtx.currentTime);
     }
   } catch (err) {
     console.warn("Error stopping alarm audio:", err);
