@@ -422,10 +422,7 @@ export default function RedesignedTracking() {
           <div className="absolute right-0 top-0 opacity-10 pointer-events-none transform translate-x-2 -translate-y-2">
             <Train size={120} />
           </div>
-          <div className="flex items-center justify-between">
-            <span className="text-[9px] font-black uppercase tracking-wider bg-white/25 px-2 py-0.5 rounded-full">
-              Sponsor Pitch Draft
-            </span>
+          <div className="flex items-center justify-end">
             <span className="text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
               🔒 100% Client-Side
             </span>
