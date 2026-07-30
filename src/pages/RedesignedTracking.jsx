@@ -424,7 +424,7 @@ export default function RedesignedTracking() {
           </div>
           <div className="flex items-center justify-between">
             <span className="text-[9px] font-black uppercase tracking-wider bg-white/25 px-2 py-0.5 rounded-full">
-              Zoho Sponsor Pitch Draft
+              Sponsor Pitch Draft
             </span>
             <span className="text-[9px] font-black uppercase bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">
               🔒 100% Client-Side
