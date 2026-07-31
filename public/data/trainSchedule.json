@@ -7,6 +7,7 @@
       { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "22:08", "distanceFromOriginKm": 24 },
       { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "00:05", "distanceFromOriginKm": 159 },
       { "name": "Trichy", "lat": 10.8050, "lng": 78.6856, "arrival": "02:35", "distanceFromOriginKm": 336 },
+      { "name": "Dindigul Junction", "lat": 10.3673, "lng": 77.9803, "arrival": "04:02", "distanceFromOriginKm": 401 },
       { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "05:15", "distanceFromOriginKm": 493 },
       { "name": "Kovilpatti", "lat": 9.1726, "lng": 77.8697, "arrival": "06:44", "distanceFromOriginKm": 585 },
       { "name": "Tirunelveli", "lat": 8.7139, "lng": 77.7567, "arrival": "08:15", "distanceFromOriginKm": 650 }
@@ -20,6 +21,7 @@
       { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "14:18", "distanceFromOriginKm": 24 },
       { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "16:00", "distanceFromOriginKm": 159 },
       { "name": "Trichy", "lat": 10.8050, "lng": 78.6856, "arrival": "18:30", "distanceFromOriginKm": 336 },
+      { "name": "Dindigul Junction", "lat": 10.3673, "lng": 77.9803, "arrival": "19:40", "distanceFromOriginKm": 401 },
       { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "21:15", "distanceFromOriginKm": 493 }
     ]
   },
