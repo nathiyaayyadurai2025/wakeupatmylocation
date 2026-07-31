@@ -34,7 +34,10 @@ export default function RedesignedTrainList() {
   const classesList = ['SL', '3A', '2A', '1A'];
 
   const filtered = trains.filter(t => {
-    const clean = (s) => (s || '').toLowerCase().replace(/stasiun|station|junction|jn|\s/g, '');
+    const clean = (s) => (s || '')
+      .toLowerCase()
+      .replace(/\s*\([^)]*\)/g, '') // Strip code suffixes like (MS), (DG)
+      .replace(/stasiun|station|junction|jn|\s/g, '');
 
     let boardIdx = -1;
     if (boardingStation && t.stops && t.stops.length > 0) {
