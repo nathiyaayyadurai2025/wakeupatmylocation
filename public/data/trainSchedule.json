@@ -46,5 +46,31 @@
       { "name": "Chengalpattu", "lat": 12.6934, "lng": 79.9756, "arrival": "08:45", "distanceFromOriginKm": 60 },
       { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "14:30", "distanceFromOriginKm": 490 }
     ]
+  },
+  {
+    "trainNumber": "12638",
+    "trainName": "Pandian Express (Northbound)",
+    "stops": [
+      { "name": "Tirunelveli", "lat": 8.7139, "lng": 77.7567, "arrival": "21:30", "distanceFromOriginKm": 0 },
+      { "name": "Kovilpatti", "lat": 9.1726, "lng": 77.8697, "arrival": "22:15", "distanceFromOriginKm": 65 },
+      { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "23:45", "distanceFromOriginKm": 157 },
+      { "name": "Dindigul Junction", "lat": 10.3673, "lng": 77.9803, "arrival": "00:45", "distanceFromOriginKm": 249 },
+      { "name": "Trichy", "lat": 10.8050, "lng": 78.6856, "arrival": "01:50", "distanceFromOriginKm": 314 },
+      { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "04:15", "distanceFromOriginKm": 491 },
+      { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "05:40", "distanceFromOriginKm": 626 },
+      { "name": "Chennai Egmore", "lat": 13.0785, "lng": 80.2614, "arrival": "06:15", "distanceFromOriginKm": 650 }
+    ]
+  },
+  {
+    "trainNumber": "12636",
+    "trainName": "Vaigai Express (Northbound)",
+    "stops": [
+      { "name": "Madurai", "lat": 9.9252, "lng": 78.1198, "arrival": "06:40", "distanceFromOriginKm": 0 },
+      { "name": "Dindigul Junction", "lat": 10.3673, "lng": 77.9803, "arrival": "07:35", "distanceFromOriginKm": 92 },
+      { "name": "Trichy", "lat": 10.8050, "lng": 78.6856, "arrival": "08:45", "distanceFromOriginKm": 157 },
+      { "name": "Villupuram", "lat": 11.9401, "lng": 79.4861, "arrival": "11:20", "distanceFromOriginKm": 334 },
+      { "name": "Tambaram", "lat": 12.9249, "lng": 80.1275, "arrival": "12:55", "distanceFromOriginKm": 469 },
+      { "name": "Chennai Egmore", "lat": 13.0785, "lng": 80.2614, "arrival": "13:30", "distanceFromOriginKm": 493 }
+    ]
   }
 ]
