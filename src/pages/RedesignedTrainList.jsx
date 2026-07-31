@@ -12,14 +12,20 @@ export default function RedesignedTrainList() {
   const [search, setSearch] = useState('');
   const [filter, setFilter] = useState('All');
   const [boardingStation, setBoardingStation] = useState(null);
+  const [destinationStation, setDestinationStation] = useState(null);
   const [selectedTrain, setSelectedTrain] = useState(null);
   const [selectedClass, setSelectedClass] = useState('SL'); // Default travel class
 
   useEffect(() => {
     const st = localStorage.getItem('boardingStation');
-    if (!st) { navigate('/train'); return; }
+    if (!st) { navigate('/'); return; }
     const parsedStation = JSON.parse(st);
     setBoardingStation(parsedStation);
+
+    const destName = localStorage.getItem('destinationName');
+    if (destName) {
+      setDestinationStation({ name: destName });
+    }
 
     fetch('/data/trainSchedule.json').then(r => r.json()).then(setTrains).catch(console.error);
   }, [navigate]);
@@ -28,11 +34,13 @@ export default function RedesignedTrainList() {
   const classesList = ['SL', '3A', '2A', '1A'];
 
   const filtered = trains.filter(t => {
+    const clean = (s) => (s || '').toLowerCase().replace(/stasiun|station|junction|jn|\s/g, '');
+
+    let boardIdx = -1;
     if (boardingStation && t.stops && t.stops.length > 0) {
-      const stopsAtBoarding = t.stops.some(stop => {
+      boardIdx = t.stops.findIndex(stop => {
         const stopName = (stop.name || '').toLowerCase();
         const boardName = (boardingStation.name || '').toLowerCase();
-        const clean = (s) => s.replace(/stasiun|station|junction|jn|\s/g, '');
         const nameMatch = clean(stopName).includes(clean(boardName)) || clean(boardName).includes(clean(stopName));
         
         let distMatch = false;
@@ -42,7 +50,18 @@ export default function RedesignedTrainList() {
         return nameMatch || distMatch;
       });
 
-      if (!stopsAtBoarding) return false;
+      if (boardIdx === -1) return false;
+    }
+
+    if (destinationStation && t.stops && t.stops.length > 0) {
+      const destIdx = t.stops.findIndex(stop => {
+        const stopName = (stop.name || '').toLowerCase();
+        const destName = (destinationStation.name || '').toLowerCase();
+        return clean(stopName).includes(clean(destName)) || clean(destName).includes(clean(stopName));
+      });
+
+      if (destIdx === -1) return false;
+      if (boardIdx >= destIdx) return false; // Must move forward towards destination
     }
 
     const matchSearch = t.trainName.toLowerCase().includes(search.toLowerCase()) || t.trainNumber.toLowerCase().includes(search.toLowerCase());
@@ -193,12 +212,20 @@ export default function RedesignedTrainList() {
 
 function StopPickerSheet({ train, boardingStation, onClose }) {
   const navigate = useNavigate();
-  const [selectedDest, setSelectedDest] = useState(null);
 
   const boardIdx = Math.max(0, train.stops.findIndex(s =>
     boardingStation?.name && s.name.toLowerCase().includes(boardingStation.name.toLowerCase())
   ));
   const stops = train.stops.slice(boardIdx + 1);
+
+  const [selectedDest, setSelectedDest] = useState(() => {
+    const destName = localStorage.getItem('destinationName');
+    if (destName) {
+      const match = stops.find(s => s.name.toLowerCase().replace(/stasiun|station|junction|jn|\s/g, '').includes(destName.toLowerCase().replace(/stasiun|station|junction|jn|\s/g, '')));
+      if (match) return match;
+    }
+    return null;
+  });
 
   const handleConfirm = () => {
     if (!selectedDest) return;
