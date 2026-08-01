@@ -14,7 +14,6 @@ export default function RedesignedTrainList() {
   const [boardingStation, setBoardingStation] = useState(null);
   const [destinationStation, setDestinationStation] = useState(null);
   const [selectedTrain, setSelectedTrain] = useState(null);
-  const [selectedClass, setSelectedClass] = useState('SL'); // Default travel class
 
   useEffect(() => {
     const st = localStorage.getItem('boardingStation');
@@ -31,7 +30,6 @@ export default function RedesignedTrainList() {
   }, [navigate]);
 
   const filters = ['All', 'Express', 'Mail', 'Passenger'];
-  const classesList = ['SL', '3A', '2A', '1A'];
 
   const filtered = trains.filter(t => {
     const clean = (s) => (s || '')
@@ -159,23 +157,7 @@ export default function RedesignedTrainList() {
                   </div>
                 </div>
 
-                {/* Class Availability Selection Grid */}
-                <div className="grid grid-cols-4 gap-2 pt-1">
-                  {classesList.map(cls => (
-                    <button
-                      key={cls}
-                      onClick={() => setSelectedClass(cls)}
-                      className={`p-2 rounded-lg border text-center transition-all ${
-                        selectedClass === cls
-                          ? 'bg-orange-500/10 border-orange-500 text-orange-600'
-                          : 'bg-slate-50 dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-500'
-                      }`}
-                    >
-                      <span className="block text-xs font-bold">{cls}</span>
-                      <span className="block text-[8px] font-bold text-emerald-500">AVAILABLE</span>
-                    </button>
-                  ))}
-                </div>
+
 
                 {/* Stops Summary */}
                 <div className="flex justify-between items-center text-[10px] text-slate-500 bg-slate-50 dark:bg-slate-800/60 p-2 rounded-xl border border-slate-200/50 dark:border-slate-700/50">
